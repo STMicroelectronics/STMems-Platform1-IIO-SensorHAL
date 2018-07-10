@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 STMicroelectronics
+ * Copyright (C) 2015-2018 STMicroelectronics
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,20 +20,19 @@
 
 #include "HWSensorBase.h"
 
-/*
- * class Gyroscope
- */
+/* class Gyroscope */
 class Gyroscope : public HWSensorBaseWithPollrate {
 public:
 	Gyroscope(HWSensorBaseCommonData *data, const char *name,
-			struct device_iio_sampling_freq_avail *sfa, int handle,
-			unsigned int hw_fifo_len,
-			float power_consumption, bool wakeup);
+		  struct device_iio_sampling_freqs *sfa, int handle,
+		  unsigned int hw_fifo_len,
+		  float power_consumption, bool wakeup);
 	~Gyroscope();
 
 	virtual int CustomInit();
 	virtual int Enable(int handle, bool enable, bool lock_en_mutex);
-	virtual int SetDelay(int handle, int64_t period_ns, int64_t timeout, bool lock_en_mutex);
+	virtual int SetDelay(int handle, int64_t period_ns,
+			     int64_t timeout, bool lock_en_mutex);
 	virtual void ProcessData(SensorBaseData *data);
 };
 

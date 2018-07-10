@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2017 STMicroelectronics
+# Copyright (C) 2018 STMicroelectronics
 # Denis Ciocca - Motion MEMS Product Div.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,17 +47,11 @@ LOCAL_SRC_FILES := \
 		src/HWSensorBase.cpp \
 		src/Accelerometer.cpp \
 		src/Gyroscope.cpp \
-		linux/tools/iio/iio_utils.cpp
-
-#IIO_UTILS_SRC := linux/tools/iio/iio_utils.cpp
+		src/utils.cpp
 
 OBJS=$(subst .cpp,.o,$(LOCAL_SRC_FILES))
-#IIO_UTILS=$(subst .cpp,.o,$(IIO_UTILS_SRC))
 
 all: SensorHAL
-
-#iio_utils: $(IIO_UTILS)
-#	$(CXX) $(LDFLAGS) -shared $(IIO_UTILS) -o $(OUT)/libsensoriioutils.so
 
 SensorHAL: $(OBJS)
 	$(CXX) $(LDFLAGS) -shared $(OBJS) $(LDLIBS) -o $(OUT)/SensorHAL.so

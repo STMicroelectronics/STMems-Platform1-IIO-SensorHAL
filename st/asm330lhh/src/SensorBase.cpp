@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics SensorBase Class
  *
- * Copyright 2015-2016 STMicroelectronics Inc.
+ * Copyright 2015-2018 STMicroelectronics Inc.
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -68,12 +68,14 @@ SensorBase::SensorBase(const char *name, int handle, int type)
 		memcpy(android_name, name, strlen(name) + 1);
 
 	valid_class = true;
-	memset(dependencies_type_list, 0, SENSOR_DEPENDENCY_ID_MAX * sizeof(int));
+	memset(dependencies_type_list, 0,
+	       SENSOR_DEPENDENCY_ID_MAX * sizeof(int));
 	memset(&push_data, 0, sizeof(dependencies_t));
 	memset(&dependencies, 0, sizeof(push_data_t));
 	memset(&sensor_t_data, 0, sizeof(struct sensor_t));
 	memset(&sensor_event, 0, sizeof(sensors_event_t));
-	memset(sensors_pollrates, 0, ST_HAL_IIO_MAX_DEVICES * sizeof(int64_t));
+	memset(sensors_pollrates, 0,
+	       ST_HAL_IIO_MAX_DEVICES * sizeof(int64_t));
 
 	for (i = 0; i < ST_HAL_IIO_MAX_DEVICES; i++)
 		sensors_timeout[i] = INT64_MAX;
@@ -214,7 +216,8 @@ bool SensorBase::ValidDataToPush(int64_t timestamp)
 		if (timestamp > sensor_my_enable)
 			return true;
 	} else {
-		if ((timestamp > sensor_my_enable) && (timestamp < sensor_my_disable))
+		if ((timestamp > sensor_my_enable) &&
+		    (timestamp < sensor_my_disable))
 			return true;
 	}
 
@@ -233,7 +236,9 @@ bool SensorBase::GetDependencyMaxRange(int type, float *maxRange)
 	}
 
 	for (i = 0; i < dependencies.num; i++) {
-		found = dependencies.sb[i]->GetDependencyMaxRange(type, &maxRange_priv);
+		found =
+		  dependencies.sb[i]->GetDependencyMaxRange(type,
+							    &maxRange_priv);
 		if (found) {
 			*maxRange = maxRange_priv;
 			return true;
@@ -256,10 +261,12 @@ int SensorBase::Enable(int handle, bool enable, bool lock_en_mutex)
 	if (lock_en_mutex)
 		pthread_mutex_lock(&enable_mutex);
 
-	if ((handle == sensor_t_data.handle) && (enable == GetStatusOfHandle(handle)))
+	if ((handle == sensor_t_data.handle) &&
+	    (enable == GetStatusOfHandle(handle)))
 		goto enable_unlock_mutex;
 
-	if ((enable && !GetStatus(false)) || (!enable && !GetStatusExcludeHandle(handle))) {
+	if ((enable && !GetStatus(false)) ||
+	    (!enable && !GetStatusExcludeHandle(handle))) {
 		if (enable) {
 			SetBitEnableMask(handle);
 
@@ -273,16 +280,19 @@ int SensorBase::Enable(int handle, bool enable, bool lock_en_mutex)
 		}
 
 		for (i = 0; i < dependencies.num; i++) {
-			err = dependencies.sb[i]->Enable(sensor_t_data.handle, enable, true);
+			err = dependencies.sb[i]->Enable(sensor_t_data.handle,
+							 enable, true);
 			if (err < 0)
 				goto restore_enable_dependencies;
 		}
 
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_INFO)
 		if (enable)
-			ALOGD("\"%s\": power-on (sensor type: %d).", sensor_t_data.name, sensor_t_data.type);
+			ALOGD("\"%s\": power-on (sensor type: %d).",
+			      sensor_t_data.name, sensor_t_data.type);
 		else
-			ALOGD("\"%s\": power-off (sensor type: %d).", sensor_t_data.name, sensor_t_data.type);
+			ALOGD("\"%s\": power-off (sensor type: %d).",
+			      sensor_t_data.name, sensor_t_data.type);
 #endif /* CONFIG_ST_HAL_DEBUG_LEVEL */
 	} else {
 		if (enable)
@@ -304,7 +314,9 @@ int SensorBase::Enable(int handle, bool enable, bool lock_en_mutex)
 restore_enable_dependencies:
 	while (i > 0) {
 		i--;
-		dependencies.sb[i]->Enable(sensor_t_data.handle, !enable, true);
+		dependencies.sb[i]->Enable(sensor_t_data.handle,
+					   !enable,
+					   true);
 	}
 
 	if (enable)
@@ -358,12 +370,14 @@ bool SensorBase::GetStatus(bool lock_en_mutex)
 	return status;
 }
 
-int SensorBase::SetDelay(int handle, int64_t period_ns, int64_t timeout, bool lock_en_mutex)
+int SensorBase::SetDelay(int handle, int64_t period_ns, int64_t timeout,
+			 bool lock_en_mutex)
 {
 	int err, i;
 	int64_t restore_min_timeout, restore_min_period_ms;
 
-	if ((timeout > 0) && (timeout < INT64_MAX) && (sensor_t_data.fifoMaxEventCount == 0))
+	if ((timeout > 0) &&
+	    (timeout < INT64_MAX) && (sensor_t_data.fifoMaxEventCount == 0))
 		return -EINVAL;
 
 	if (lock_en_mutex)
@@ -376,7 +390,9 @@ int SensorBase::SetDelay(int handle, int64_t period_ns, int64_t timeout, bool lo
 	sensors_timeout[handle] = timeout;
 
 	for (i = 0; i < (int)dependencies.num; i++) {
-		err = dependencies.sb[i]->SetDelay(sensor_t_data.handle, GetMinPeriod(false), GetMinTimeout(false), true);
+		err = dependencies.sb[i]->SetDelay(sensor_t_data.handle,
+						   GetMinPeriod(false),
+						   GetMinTimeout(false), true);
 		if (err < 0)
 			goto restore_delay_dependencies;
 	}
@@ -391,7 +407,9 @@ restore_delay_dependencies:
 	sensors_timeout[handle] = restore_min_timeout;
 
 	for (i--; i >= 0; i--)
-		dependencies.sb[i]->SetDelay(sensor_t_data.handle, GetMinPeriod(false), GetMinTimeout(false), true);
+		dependencies.sb[i]->SetDelay(sensor_t_data.handle,
+					     GetMinPeriod(false),
+					     GetMinTimeout(false), true);
 
 	if (lock_en_mutex)
 		pthread_mutex_unlock(&enable_mutex);
@@ -401,14 +419,18 @@ restore_delay_dependencies:
 
 void SensorBase::GetDepenciesTypeList(int type[SENSOR_DEPENDENCY_ID_MAX])
 {
-	memcpy(type, dependencies_type_list, SENSOR_DEPENDENCY_ID_MAX * sizeof(int));
+	memcpy(type, dependencies_type_list,
+	       SENSOR_DEPENDENCY_ID_MAX * sizeof(int));
 }
 
-int SensorBase::AllocateBufferForDependencyData(DependencyID id, unsigned int max_fifo_len)
+int SensorBase::AllocateBufferForDependencyData(DependencyID id,
+						unsigned int max_fifo_len)
 {
-	circular_buffer_data[id] = new CircularBuffer(max_fifo_len < 2 ? 10 : 10 * max_fifo_len);
+	circular_buffer_data[id] =
+		new CircularBuffer(max_fifo_len < 2 ? 10 : 10 * max_fifo_len);
 	if (!circular_buffer_data[id]) {
-		ALOGE("%s: Failed to allocate circular buffer data.", GetName());
+		ALOGE("%s: Failed to allocate circular buffer data.",
+		      GetName());
 		return -ENOMEM;
 	}
 
@@ -423,7 +445,8 @@ void SensorBase::DeAllocateBufferForDependencyData(DependencyID id)
 int SensorBase::AddSensorToDataPush(SensorBase *t)
 {
 	if (push_data.num >= SENSOR_DEPENDENCY_ID_MAX) {
-		ALOGE("%s: Failed to add dependency data, too many sensors to push data.", android_name);
+		ALOGE("%s: Failed to add dependency data, too many sensors to push data.",
+		      android_name);
 		return -ENOMEM;
 	}
 
@@ -460,7 +483,8 @@ int SensorBase::AddSensorDependency(SensorBase *p)
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 	if (dependencies.num >= SENSOR_DEPENDENCY_ID_MAX) {
-		ALOGE("%s: Failed to add dependency, too many dependencies.", android_name);
+		ALOGE("%s: Failed to add dependency, too many dependencies.",
+		      android_name);
 		return -ENOMEM;
 	}
 
@@ -475,7 +499,8 @@ int SensorBase::AddSensorDependency(SensorBase *p)
 	sensor_t_data.power += dependecy_data.power;
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION > ST_HAL_KITKAT_VERSION)
-	sensor_dependency_wake_flag = (dependecy_data.flags & SENSOR_FLAG_WAKE_UP);
+	sensor_dependency_wake_flag =
+		(dependecy_data.flags & SENSOR_FLAG_WAKE_UP);
 	if (!sensor_dependency_wake_flag)
 		sensor_t_data.flags &= ~sensor_dependency_wake_flag;
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
@@ -516,13 +541,13 @@ bool SensorBase::GetSensor_tData(struct sensor_t *data)
 }
 
 int SensorBase::FlushData(int __attribute__((unused))handle,
-					bool __attribute__((unused))lock_en_mute)
+			  bool __attribute__((unused))lock_en_mute)
 {
 	return 0;
 }
 
 void SensorBase::ProcessFlushData(int __attribute__((unused))handle,
-					int64_t __attribute__((unused))timestamp)
+				  int64_t __attribute__((unused))timestamp)
 {
 	return;
 }
@@ -542,12 +567,15 @@ void SensorBase::WriteFlushEventToPipe()
 	flush_event_data.version = META_DATA_VERSION;
 
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_VERBOSE)
-	ALOGD("\"%s\": write flush event to pipe (sensor type: %d).", GetName(), GetType());
+	ALOGD("\"%s\": write flush event to pipe (sensor type: %d).",
+	      GetName(),
+	      GetType());
 #endif /* CONFIG_ST_HAL_DEBUG_LEVEL */
 
 	err = write(write_pipe_fd, &flush_event_data, sizeof(sensors_event_t));
 	if (err <= 0)
-		ALOGE("%s: Failed to write flush event data to pipe.", android_name);
+		ALOGE("%s: Failed to write flush event data to pipe.",
+		      android_name);
 }
 
 void SensorBase::WriteDataToPipe(int64_t __attribute__((unused))hw_pollrate)
@@ -556,16 +584,20 @@ void SensorBase::WriteDataToPipe(int64_t __attribute__((unused))hw_pollrate)
 
 	if (ValidDataToPush(sensor_event.timestamp)) {
 		if (sensor_event.timestamp > last_data_timestamp) {
-			err = write(write_pipe_fd, &sensor_event, sizeof(sensors_event_t));
+			err = write(write_pipe_fd,
+				    &sensor_event,
+				    sizeof(sensors_event_t));
 			if (err <= 0) {
-				ALOGE("%s: Failed to write sensor data to pipe. (errno: %d)", android_name, -errno);
+				ALOGE("%s: Failed to write sensor data to pipe. (errno: %d)",
+				      android_name, -errno);
 				return;
 			}
 
 			last_data_timestamp = sensor_event.timestamp;
 
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_EXTRA_VERBOSE)
-			ALOGD("\"%s\": pushed data to android: timestamp=%" PRIu64 "ns (sensor type: %d).", sensor_t_data.name, sensor_event.timestamp, sensor_t_data.type);
+			ALOGD("\"%s\": pushed data to android: timestamp=%" PRIu64 "ns (sensor type: %d).",
+			      sensor_t_data.name, sensor_event.timestamp, sensor_t_data.type);
 #endif /* CONFIG_ST_HAL_DEBUG_LEVEL */
 		}
 	}
@@ -593,15 +625,19 @@ void SensorBase::ReceiveDataFromDependency(int handle, SensorBaseData *data)
 		if (data->timestamp > sensor_global_enable)
 			fill_buffer = true;
 	} else {
-		if ((data->timestamp > sensor_global_enable) && (data->timestamp < sensor_global_disable))
+		if ((data->timestamp > sensor_global_enable) &&
+		    (data->timestamp < sensor_global_disable))
 			fill_buffer = true;
 	}
 
 	if (fill_buffer) {
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_EXTRA_VERBOSE)
-		err = circular_buffer_data[GetDependencyIDFromHandle(handle)]->writeElement(data);
+		err =
+		  circular_buffer_data[GetDependencyIDFromHandle(handle)]->writeElement(data);
 		if (err < 0)
-			ALOGE("%s: Circular Buffer override, increase CircularBuffer size. Receiving data from dependency %d.", GetName(), GetDependencyIDFromHandle(handle));
+			ALOGE("%s: Circular Buffer override, increase CircularBuffer size. Receiving data from dependency %d.",
+			      GetName(),
+			      GetDependencyIDFromHandle(handle));
 #else /* CONFIG_ST_HAL_DEBUG_LEVEL */
 		circular_buffer_data[GetDependencyIDFromHandle(handle)]->writeElement(data);
 #endif /* CONFIG_ST_HAL_DEBUG_LEVEL */
@@ -610,7 +646,8 @@ void SensorBase::ReceiveDataFromDependency(int handle, SensorBaseData *data)
 	return;
 }
 
-int SensorBase::GetLatestValidDataFromDependency(int dependency_id, SensorBaseData *data, int64_t timesync)
+int SensorBase::GetLatestValidDataFromDependency(int dependency_id, SensorBaseData *data,
+						 int64_t timesync)
 {
 	return circular_buffer_data[dependency_id]->readSyncElement(data, timesync);
 }

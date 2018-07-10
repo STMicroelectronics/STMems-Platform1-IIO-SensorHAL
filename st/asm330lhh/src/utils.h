@@ -1,5 +1,5 @@
 /*
- * STMicroelectronics iio_utils header for SensorHAL
+ * STMicroelectronics device iio utils header for SensorHAL
  *
  * Copyright 2015-2018 STMicroelectronics Inc.
  * Author: Denis Ciocca - <denis.ciocca@st.com>
@@ -16,68 +16,52 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef __IIO_UTILS
-#define __IIO_UTILS
+#ifndef __DEVICE_IIO_UTILS
+#define __DEVICE_IIO_UTILS
 
 #include <sys/ioctl.h>
-#include <stdint.h>
-#include "SensorHAL.h"
-
-#define DEVICE_IIO_MAX_FILENAME_LEN				256
-#define DEVICE_IIO_MAX_NAME_LENGTH				16
-#define DEVICE_IIO_MAX_SAMPLINGFREQ_LENGTH		32
-#define DEVICE_IIO_MAX_SAMP_FREQ_AVAILABLE		10
-
-#define DEVICE_IIO_SCALE_AVAILABLE				10
-
-#define IIO_EVENT_CODE_EXTRACT_CHAN(mask)		((__s16)(mask & 0xFFFF))
-#define IIO_EVENT_CODE_EXTRACT_CHAN2(mask)		((__s16)(((mask) >> 16) & 0xFFFF))
-#define IIO_EVENT_CODE_EXTRACT_MODIFIER(mask)	((mask >> 40) & 0xFF)
-#define IIO_EVENT_CODE_EXTRACT_DIFF(mask)		(((mask) >> 55) & 0x1)
-
 #include <linux/ioctl.h>
 #include <linux/types.h>
+#include <stdint.h>
 
-struct device_iio_event_data {
-	__u64	id;
-	__s64	timestamp;
-};
+#include "SensorHAL.h"
 
-#define IIO_GET_EVENT_FD_IOCTL _IOR('i', 0x90, int)
-#define IIO_EVENT_CODE_EXTRACT_TYPE(mask) ((mask >> 56) & 0xFF)
-#define IIO_EVENT_CODE_EXTRACT_DIR(mask) ((mask >> 48) & 0x7F)
-#define IIO_EVENT_CODE_EXTRACT_CHAN_TYPE(mask) ((mask >> 32) & 0xFF)
+#define DEVICE_IIO_MAX_FILENAME_LEN		256
+#define DEVICE_IIO_MAX_NAME_LENGTH		16
+#define DEVICE_IIO_MAX_SAMPLINGFREQ_LENGTH	32
+#define DEVICE_IIO_MAX_SAMP_FREQ_AVAILABLE	10
+#define DEVICE_IIO_SCALE_AVAILABLE		10
 
-/* Event code number extraction depends on which type of event we have.
- * Perhaps review this function in the future*/
-#define IIO_EVENT_CODE_EXTRACT_CHAN(mask) ((__s16)(mask & 0xFFFF))
-#define IIO_EVENT_CODE_EXTRACT_CHAN2(mask) ((__s16)(((mask) >> 16) & 0xFFFF))
-
-#define IIO_EVENT_CODE_EXTRACT_MODIFIER(mask) ((mask >> 40) & 0xFF)
-#define IIO_EVENT_CODE_EXTRACT_DIFF(mask) (((mask) >> 55) & 0x1)
-
+/*
+ * To fill values for following define please refer to ASM330LHH
+ * driver implementation and kernel version
+ */
 typedef enum {
-	/* Refer to ASM330LHH driver implementation */
 	DEVICE_IIO_ACC = 3,
 	DEVICE_IIO_GYRO,
 	DEVICE_IIO_TEMP = 9,
 	DEVICE_IIO_TIMESTAMP = 13,
 } device_iio_chan_type_t;
 
-#define IIO_EV_DIR_FIFO_DATA	0x05
-#define IIO_EV_TYPE_FIFO_FLUSH	0x06
+#define DEVICE_IIO_EV_DIR_FIFO_DATA		0x05
+#define DEVICE_IIO_EV_TYPE_FIFO_FLUSH		0x06
 
-struct device_iio_scale_available {
+struct device_iio_events {
+	uint64_t event_id;
+	int64_t event_timestamp;
+};
+
+struct device_iio_scales {
 	float scales[DEVICE_IIO_SCALE_AVAILABLE];
 	unsigned int length;
 };
 
-struct device_iio_sampling_freq_avail {
+struct device_iio_sampling_freqs {
 	unsigned int freq[DEVICE_IIO_MAX_SAMP_FREQ_AVAILABLE];
 	unsigned int length;
 };
 
-struct device_iio_channel_info {
+struct device_iio_info_channel {
 	char *name;
 	char *type_name;
 	unsigned int index;
@@ -93,7 +77,7 @@ struct device_iio_channel_info {
 	unsigned int location;
 };
 
-class iio_utils {
+class device_iio_utils {
 	private:
 		static int sysfs_write_int(char *file, int val);
 		static int sysfs_write_str(char *file, char *str);
@@ -107,28 +91,28 @@ class iio_utils {
 		static int get_device_by_name(const char *name);
 		static int enable_sensor(char *device_dir, bool enable);
 		static int get_sampling_frequency_available(char *device_dir,
-				struct device_iio_sampling_freq_avail *sfa);
+				struct device_iio_sampling_freqs *sfa);
 		static int get_fifo_length(const char *device_dir);
 		static int set_sampling_frequency(char *device_dir,
-										  unsigned int frequency);
+						  unsigned int frequency);
 		static int set_hw_fifo_watermark(char *device_dir,
-										 unsigned int watermark);
+						 unsigned int watermark);
 		static int hw_fifo_flush(char *device_dir);
 		static int set_scale(const char *device_dir, float value,
-							 device_iio_chan_type_t device_type);
+				     device_iio_chan_type_t device_type);
 		static int get_scale(const char *device_dir, float *value,
-							 device_iio_chan_type_t device_type);
-		static int get_type(struct device_iio_channel_info *channel,
-							const char *device_dir, const char *name,
-							const char *post);
+				     device_iio_chan_type_t device_type);
+		static int get_type(struct device_iio_info_channel *channel,
+				    const char *device_dir, const char *name,
+				    const char *post);
 		
 		static int get_scale_available(const char *device_dir,
-									   struct device_iio_scale_available *sa,
-									   device_iio_chan_type_t device_type);
+					       struct device_iio_scales *sa,
+					       device_iio_chan_type_t device_type);
 		static int support_injection_mode(const char *device_dir);
 		static int set_injection_mode(const char *device_dir, bool enable);
 		static int inject_data(const char *device_dir, unsigned char *data, 
-							   int len, device_iio_chan_type_t device_type);
+				       int len, device_iio_chan_type_t device_type);
 };
 
-#endif /* __IIO_UTILS */
+#endif /* __DEVICE_IIO_UTILS */

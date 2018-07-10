@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 STMicroelectronics
+ * Copyright (C) 2015-2018 STMicroelectronics
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,11 +25,9 @@
 #include <pthread.h>
 #include <errno.h>
 
-#define ST_ODR_STACK_MAX_ELEMENTS		(20)
+#define ST_ODR_STACK_MAX_ELEMENTS (20)
 
-/*
- * class ChangeODRTimestampStack
- */
+/* class ChangeODRTimestampStack */
 class ChangeODRTimestampStack {
 private:
 	pthread_mutex_t data_mutex;

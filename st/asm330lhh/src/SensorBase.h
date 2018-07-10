@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 STMicroelectronics
+ * Copyright (C) 2015-2018 STMicroelectronics
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,8 @@
 #include <FlushRequested.h>
 #include <ChangeODRTimestampStack.h>
 
-#if defined(PLTF_LINUX_ENABLED) || (CONFIG_ST_HAL_ANDROID_VERSION <= ST_HAL_KITKAT_VERSION)
+#if defined(PLTF_LINUX_ENABLED) || \
+    (CONFIG_ST_HAL_ANDROID_VERSION <= ST_HAL_KITKAT_VERSION)
 typedef struct atomic_short {
 	short counter;
 	pthread_mutex_t atomic_mutex;
@@ -104,10 +105,7 @@ typedef enum InjectionModeID {
 	SENSOR_INJECTED,
 } InjectionModeID;
 
-
-/*
- * class SensorBase
- */
+/* class SensorBase */
 class SensorBase {
 private:
 	bool valid_class;
@@ -168,7 +166,8 @@ protected:
 	int64_t GetMinPeriod(bool lock_en_mutex);
 	DependencyID GetDependencyIDFromHandle(int handle);
 
-	int AllocateBufferForDependencyData(DependencyID id, unsigned int max_fifo_len);
+	int AllocateBufferForDependencyData(DependencyID id,
+					    unsigned int max_fifo_len);
 	void DeAllocateBufferForDependencyData(DependencyID id);
 
 	void SetBitEnableMask(int handle);
@@ -203,7 +202,8 @@ public:
 	bool GetStatus(bool lock_en_mutex);
 	void SetEnableTimestamp(int handle, bool enable, int64_t timestamp);
 
-	virtual int SetDelay(int handle, int64_t period_ns, int64_t timeout, bool lock_en_mutex);
+	virtual int SetDelay(int handle, int64_t period_ns, int64_t timeout,
+			     bool lock_en_mutex);
 
 	virtual int FlushData(int handle, bool lock_en_mute);
 	virtual void ProcessFlushData(int handle, int64_t timestamp);
@@ -212,8 +212,11 @@ public:
 	virtual void WriteDataToPipe(int64_t hw_pollrate);
 
 	virtual void ProcessData(SensorBaseData *data);
-	virtual void ReceiveDataFromDependency(int handle, SensorBaseData *data);
-	virtual int GetLatestValidDataFromDependency(int dependency_id, SensorBaseData *data, int64_t timesync);
+	virtual void ReceiveDataFromDependency(int handle,
+					       SensorBaseData *data);
+	virtual int GetLatestValidDataFromDependency(int dependency_id,
+						     SensorBaseData *data,
+						     int64_t timesync);
 
 	static void *ThreadDataWork(void *context);
 	virtual void ThreadDataTask();

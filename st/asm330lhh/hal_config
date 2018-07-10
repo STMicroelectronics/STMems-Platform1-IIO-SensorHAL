@@ -2,6 +2,7 @@
 # Automatically generated file; DO NOT EDIT.
 # SensorHAL IIO Configuration
 #
+CONFIG_ST_HAL_ANDROID_VERSION=4
 
 #
 # Enable/disable sensors
@@ -29,4 +30,3 @@ CONFIG_ST_HAL_ASM330LHH_ENABLED=y
 # Factory calibration & Self-Test
 #
 # CONFIG_ST_HAL_FACTORY_CALIBRATION is not set
-# CONFIG_ST_HAL_HAS_SELFTEST_FUNCTIONS is not set

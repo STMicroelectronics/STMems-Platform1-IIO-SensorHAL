@@ -1,4 +1,4 @@
-# Copyright (C) 2012 STMicroelectronics
+# Copyright (C) 2012-2018 STMicroelectronics
 # Matteo Dameno, Denis Ciocca - Motion MEMS Product Div.
 # Copyright (C) 2008 The Android Open Source Project
 #
