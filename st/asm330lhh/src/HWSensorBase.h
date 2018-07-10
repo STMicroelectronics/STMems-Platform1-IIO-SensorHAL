@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 STMicroelectronics
+ * Copyright (C) 2015-2018 STMicroelectronics
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@
 #include "SensorBase.h"
 
 extern "C" {
-	#include "iio_utils.h"
+	#include "utils.h"
 };
 
 #define HW_SENSOR_BASE_DEFAULT_IIO_BUFFER_LEN	(2)
@@ -33,14 +33,14 @@ extern "C" {
 #define HW_SENSOR_BASE_MAX_CHANNELS		(8)
 
 struct HWSensorBaseCommonData {
-	char iio_sysfs_path[HW_SENSOR_BASE_IIO_SYSFS_PATH_MAX];
+	char device_iio_sysfs_path[HW_SENSOR_BASE_IIO_SYSFS_PATH_MAX];
 	char device_name[HW_SENSOR_BASE_IIO_DEVICE_NAME_MAX];
-	unsigned int iio_dev_num;
+	unsigned int device_iio_dev_num;
 
 	int num_channels;
-	struct device_iio_channel_info channels[HW_SENSOR_BASE_MAX_CHANNELS];
+	struct device_iio_info_channel channels[HW_SENSOR_BASE_MAX_CHANNELS];
 
-	struct device_iio_scale_available sa;
+	struct device_iio_scales sa;
 } typedef HWSensorBaseCommonData;
 
 
@@ -71,19 +71,21 @@ protected:
 
 public:
 	HWSensorBase(HWSensorBaseCommonData *data, const char *name,
-				int handle, int sensor_type, unsigned int hw_fifo_len,
-				float power_consumption);
+		     int handle, int sensor_type, unsigned int hw_fifo_len,
+		     float power_consumption);
 	virtual ~HWSensorBase();
 
 	virtual int Enable(int handle, bool enable, bool lock_en_mute);
-	virtual int SetDelay(int handle, int64_t period_ns, int64_t timeout, bool lock_en_mute);
+	virtual int SetDelay(int handle, int64_t period_ns,
+			     int64_t timeout, bool lock_en_mute);
 
 	virtual int AddSensorDependency(SensorBase *p);
 	virtual void RemoveSensorDependency(SensorBase *p);
 
-	int ApplyFactoryCalibrationData(char *filename, time_t *last_modification);
+	int ApplyFactoryCalibrationData(char *filename,
+					time_t *last_modification);
 
-	virtual void ProcessEvent(struct device_iio_event_data *event_data);
+	virtual void ProcessEvent(struct device_iio_events *event_data);
 	virtual int FlushData(int handle, bool lock_en_mute);
 	virtual void ProcessFlushData(int handle, int64_t timestamp);
 	virtual void ThreadDataTask();
@@ -103,16 +105,22 @@ public:
  */
 class HWSensorBaseWithPollrate : public HWSensorBase {
 private:
-	struct device_iio_sampling_freq_avail sampling_frequency_available;
+	struct device_iio_sampling_freqs sampling_frequency_available;
 
 public:
-	HWSensorBaseWithPollrate(HWSensorBaseCommonData *data, const char *name,
-			struct device_iio_sampling_freq_avail *sfa, int handle,
-			int sensor_type, unsigned int hw_fifo_len,
-			float power_consumption);
+	HWSensorBaseWithPollrate(HWSensorBaseCommonData *data,
+				 const char *name,
+				 struct device_iio_sampling_freqs *sfa,
+				 int handle,
+				 int sensor_type,
+				 unsigned int hw_fifo_len,
+				 float power_consumption);
 	virtual ~HWSensorBaseWithPollrate();
 
-	virtual int SetDelay(int handle, int64_t period_ns, int64_t timeout, bool lock_en_mute);
+	virtual int SetDelay(int handle,
+			     int64_t period_ns,
+			     int64_t timeout,
+			     bool lock_en_mute);
 	virtual int FlushData(int handle, bool lock_en_mute);
 	virtual void WriteDataToPipe(int64_t hw_pollrate);
 };

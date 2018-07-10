@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics SensorHAL simple test
  *
- * Copyright 2017 STMicroelectronics Inc.
+ * Copyright 2018 STMicroelectronics Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
  */

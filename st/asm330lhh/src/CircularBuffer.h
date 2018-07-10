@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 STMicroelectronics
+ * Copyright (C) 2015-2018 STMicroelectronics
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
