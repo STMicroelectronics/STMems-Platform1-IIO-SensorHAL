@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics Circular Buffer Class
  *
- * Copyright 2015-2016 STMicroelectronics Inc.
+ * Copyright 2015-2018 STMicroelectronics Inc.
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -13,7 +13,8 @@
 
 CircularBuffer::CircularBuffer(unsigned int num_elements)
 {
-	data_sensor = (SensorBaseData *)malloc(num_elements * sizeof(SensorBaseData));
+	data_sensor =
+	    (SensorBaseData *)malloc(num_elements * sizeof(SensorBaseData));
 
 	pthread_mutex_init(&data_mutex, NULL);
 
@@ -85,7 +86,8 @@ int CircularBuffer::readElement(SensorBaseData *data)
 	return num_remaining_elements;
 }
 
-int CircularBuffer::readSyncElement(SensorBaseData *data, int64_t timestamp_sync)
+int CircularBuffer::readSyncElement(SensorBaseData *data,
+				    int64_t timestamp_sync)
 {
 	int i = 0;
 	int64_t timediff1, timediff2;
@@ -113,11 +115,13 @@ int CircularBuffer::readSyncElement(SensorBaseData *data, int64_t timestamp_sync
 
 		if (i > 1) {
 			next1_available_element++;
-			if (next1_available_element == (&data_sensor[0] + length))
+			if (next1_available_element ==
+			    (&data_sensor[0] + length))
 				next1_available_element = &data_sensor[0];
 		}
 
-		timediff1 = next1_available_element->timestamp - timestamp_sync;
+		timediff1 =
+			next1_available_element->timestamp - timestamp_sync;
 		if (timediff1 < 0)
 			timediff1 = -timediff1;
 
@@ -125,11 +129,13 @@ int CircularBuffer::readSyncElement(SensorBaseData *data, int64_t timestamp_sync
 		if (next2_available_element == (&data_sensor[0] + length))
 			next2_available_element = &data_sensor[0];
 
-		timediff2 = next2_available_element->timestamp - timestamp_sync;
+		timediff2 =
+			next2_available_element->timestamp - timestamp_sync;
 		if (timediff2 < 0)
 			timediff2 = -timediff2;
 
-	} while ((timediff2 < timediff1) && (i < ((int)elements_available - 1)));
+	} while ((timediff2 < timediff1) &&
+		 (i < ((int)elements_available - 1)));
 
 	if (timediff2 < timediff1) {
 		memcpy(data, next2_available_element, sizeof(SensorBaseData));

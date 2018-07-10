@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics Accelerometer Sensor Class
  *
- * Copyright 2015-2016 STMicroelectronics Inc.
+ * Copyright 2015-2018 STMicroelectronics Inc.
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -14,7 +14,7 @@
 #include "Accelerometer.h"
 
 Accelerometer::Accelerometer(HWSensorBaseCommonData *data, const char *name,
-		struct device_iio_sampling_freq_avail *sfa, int handle,
+		struct device_iio_sampling_freqs *sfa, int handle,
 		unsigned int hw_fifo_len, float power_consumption, bool wakeup) :
 			HWSensorBaseWithPollrate(data, name, sfa, handle,
 			SENSOR_TYPE_ACCELEROMETER, hw_fifo_len, power_consumption)
@@ -30,7 +30,8 @@ Accelerometer::Accelerometer(HWSensorBaseCommonData *data, const char *name,
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 	sensor_t_data.resolution = data->channels[0].scale;
-	sensor_t_data.maxRange = sensor_t_data.resolution * (pow(2, data->channels[0].bits_used - 1) - 1);
+	sensor_t_data.maxRange =
+		sensor_t_data.resolution * (pow(2, data->channels[0].bits_used - 1) - 1);
 }
 
 Accelerometer::~Accelerometer()
@@ -49,14 +50,23 @@ void Accelerometer::ProcessData(SensorBaseData *data)
 
 	memcpy(tmp_raw_data, data->raw, SENSOR_DATA_3AXIS * sizeof(float));
 
-	data->raw[0] = SENSOR_X_DATA(tmp_raw_data[0], tmp_raw_data[1], tmp_raw_data[2], CONFIG_ST_HAL_ACCEL_ROT_MATRIX);
-	data->raw[1] = SENSOR_Y_DATA(tmp_raw_data[0], tmp_raw_data[1], tmp_raw_data[2], CONFIG_ST_HAL_ACCEL_ROT_MATRIX);
-	data->raw[2] = SENSOR_Z_DATA(tmp_raw_data[0], tmp_raw_data[1], tmp_raw_data[2], CONFIG_ST_HAL_ACCEL_ROT_MATRIX);
+	data->raw[0] = SENSOR_X_DATA(tmp_raw_data[0],
+				     tmp_raw_data[1],
+				     tmp_raw_data[2],
+				     CONFIG_ST_HAL_ACCEL_ROT_MATRIX);
+	data->raw[1] = SENSOR_Y_DATA(tmp_raw_data[0],
+				     tmp_raw_data[1],
+				     tmp_raw_data[2],
+				     CONFIG_ST_HAL_ACCEL_ROT_MATRIX);
+	data->raw[2] = SENSOR_Z_DATA(tmp_raw_data[0],
+				     tmp_raw_data[1],
+				     tmp_raw_data[2],
+				     CONFIG_ST_HAL_ACCEL_ROT_MATRIX);
 
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_EXTRA_VERBOSE)
 	ALOGD("\"%s\": received new sensor data: x=%f y=%f z=%f, timestamp=%" PRIu64 "ns, deltatime=%" PRIu64 "ns (sensor type: %d).",
-				sensor_t_data.name, data->raw[0], data->raw[1], data->raw[2],
-				data->timestamp, data->timestamp - sensor_event.timestamp, sensor_t_data.type);
+	      sensor_t_data.name, data->raw[0], data->raw[1], data->raw[2],
+	      data->timestamp, data->timestamp - sensor_event.timestamp, sensor_t_data.type);
 #endif /* CONFIG_ST_HAL_DEBUG_LEVEL */
 
 #ifdef CONFIG_ST_HAL_FACTORY_CALIBRATION
@@ -83,3 +93,4 @@ void Accelerometer::ProcessData(SensorBaseData *data)
 	HWSensorBaseWithPollrate::WriteDataToPipe(data->pollrate_ns);
 	HWSensorBaseWithPollrate::ProcessData(data);
 }
+

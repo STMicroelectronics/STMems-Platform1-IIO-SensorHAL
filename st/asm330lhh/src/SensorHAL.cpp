@@ -1,8 +1,7 @@
 /*
  * STMicroelectronics SensorHAL core
  *
- * Version 3.1.5
- * Copyright 2015-2016 STMicroelectronics Inc.
+ * Copyright 2015-2018 STMicroelectronics Inc.
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -25,8 +24,10 @@
 #include "Gyroscope.h"
 
 /*
- * STSensorHAL_iio_devices_data: informations related to the IIO devices, used during open-sensor function
- * @iio_sysfs_path: IIO device sysfs path.
+ * STSensorHAL_device_iio_devices_data: informations related to the IIO devices,
+ * used during open-sensor function
+ *
+ * @device_iio_sysfs_path: IIO device sysfs path.
  * @device_name: IIO device name.
  * @android_name: name showed in Android OS.
  * @dev_id: iio:device device id.
@@ -39,8 +40,8 @@
  * @power_consumption: sensor power consumption in mA.
  * @sfa: sampling frequency available.
  */
-struct STSensorHAL_iio_devices_data {
-	char *iio_sysfs_path;
+struct STSensorHAL_device_iio_devices_data {
+	char *device_iio_sysfs_path;
 	char *device_name;
 	char *android_name;
 	unsigned int dev_id;
@@ -49,14 +50,14 @@ struct STSensorHAL_iio_devices_data {
 	bool wake_up_sensor;
 
 	int num_channels;
-	struct device_iio_channel_info *channels;
-	struct device_iio_scale_available sa;
+	struct device_iio_info_channel *channels;
+	struct device_iio_scales sa;
 
 	unsigned int hw_fifo_len;
 	float power_consumption;
 
-	struct device_iio_sampling_freq_avail sfa;
-} typedef STSensorHAL_iio_devices_data;
+	struct device_iio_sampling_freqs sfa;
+} typedef STSensorHAL_device_iio_devices_data;
 
 /*
  * ST_sensors_supported: ST sensors data used for discovery procedure
@@ -69,13 +70,14 @@ static const struct ST_sensors_supported {
 	const char *driver_name;
 	const char *android_name;
 	int android_sensor_type;
-	device_iio_chan_type_t iio_sensor_type;
+	device_iio_chan_type_t device_iio_sensor_type;
 	float power_consumption;
 } ST_sensors_supported[] = {
 /**************** Accelerometer sensors ****************/
 #ifdef CONFIG_ST_HAL_ACCEL_ENABLED
 #ifdef CONFIG_ST_HAL_ASM330LHH_ENABLED
-	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_1, ACCEL_NAME_SUFFIX_IIO),
+	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_1,
+				    ACCEL_NAME_SUFFIX_IIO),
 				    SENSOR_TYPE_ACCELEROMETER,
 				    DEVICE_IIO_ACC,
 				    "ASM330LHH Accelerometer Sensor",
@@ -86,7 +88,8 @@ static const struct ST_sensors_supported {
 /**************** Gyroscope sensors ****************/
 #ifdef CONFIG_ST_HAL_GYRO_ENABLED
 #ifdef CONFIG_ST_HAL_ASM330LHH_ENABLED
-	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_1, GYRO_NAME_SUFFIX_IIO),
+	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_1,
+				    GYRO_NAME_SUFFIX_IIO),
 				    SENSOR_TYPE_GYROSCOPE,
 				    DEVICE_IIO_GYRO,
 				    "ASM330LHH Gyroscope Sensor",
@@ -96,13 +99,14 @@ static const struct ST_sensors_supported {
 };
 
 #ifdef CONFIG_ST_HAL_FACTORY_CALIBRATION
-#define ST_HAL_PRIVATE_DATA_CALIBRATION_LM_ACCEL_ID		(0)
-#define ST_HAL_PRIVATE_DATA_CALIBRATION_LM_GYRO_ID		(2)
-#define ST_HAL_PRIVATE_DATA_CALIBRATION_LM_MAX_ID		(3)
+#define ST_HAL_PRIVATE_DATA_CALIBRATION_LM_ACCEL_ID	(0)
+#define ST_HAL_PRIVATE_DATA_CALIBRATION_LM_GYRO_ID	(2)
+#define ST_HAL_PRIVATE_DATA_CALIBRATION_LM_MAX_ID	(3)
 
 /*
  * st_hal_private_data: private data structure
- * @calibration_last_modification: time_t infomations about last calibration modification.
+ * @calibration_last_modification: time_t infomations about
+ *                                 last calibration modification.
  */
 struct st_hal_private_data {
 	time_t calibration_last_modification[ST_HAL_PRIVATE_DATA_CALIBRATION_LM_MAX_ID];
@@ -120,28 +124,38 @@ static int st_hal_set_operation_mode(unsigned int mode);
  *
  * Return value: sensor class pointer on success, NULL pointer on fail.
  */
-static SensorBase* st_hal_create_class_sensor(STSensorHAL_iio_devices_data *data, int handle, void *custom_data)
+static SensorBase* st_hal_create_class_sensor(STSensorHAL_device_iio_devices_data *data,
+					      int handle, void *custom_data)
 {
 	SensorBase *sb = NULL;
 	struct HWSensorBaseCommonData class_data;
 #ifdef CONFIG_ST_HAL_FACTORY_CALIBRATION
 	int err;
-	struct st_hal_private_data *priv_data = (struct st_hal_private_data *)custom_data;
+	struct st_hal_private_data *priv_data =
+		(struct st_hal_private_data *)custom_data;
 #else /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
 	(void)custom_data;
 #endif /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
 
-	if ((strlen(data->iio_sysfs_path) + 1 > HW_SENSOR_BASE_IIO_SYSFS_PATH_MAX) ||
-			(strlen(data->device_name) + 1 > HW_SENSOR_BASE_IIO_DEVICE_NAME_MAX) ||
-			(data->num_channels > HW_SENSOR_BASE_MAX_CHANNELS))
+	if ((strlen(data->device_iio_sysfs_path) + 1 > HW_SENSOR_BASE_IIO_SYSFS_PATH_MAX) ||
+	    (strlen(data->device_name) + 1 > HW_SENSOR_BASE_IIO_DEVICE_NAME_MAX) ||
+	    (data->num_channels > HW_SENSOR_BASE_MAX_CHANNELS))
 		return NULL;
 
-	memcpy(class_data.device_name, data->device_name, strlen(data->device_name) + 1);
-	memcpy(class_data.iio_sysfs_path, data->iio_sysfs_path, strlen(data->iio_sysfs_path) + 1);
-	memcpy(&class_data.sa, &data->sa, sizeof(class_data.sa));
-	memcpy(class_data.channels, data->channels, data->num_channels * sizeof(class_data.channels[0]));
+	memcpy(class_data.device_name,
+	       data->device_name,
+	       strlen(data->device_name) + 1);
+	memcpy(class_data.device_iio_sysfs_path,
+	       data->device_iio_sysfs_path,
+	       strlen(data->device_iio_sysfs_path) + 1);
+	memcpy(&class_data.sa,
+	       &data->sa,
+	       sizeof(class_data.sa));
+	memcpy(class_data.channels,
+	       data->channels,
+	       data->num_channels * sizeof(class_data.channels[0]));
 
-	class_data.iio_dev_num = data->dev_id;
+	class_data.device_iio_dev_num = data->dev_id;
 	class_data.num_channels = data->num_channels;
 
 	switch (data->sensor_type) {
@@ -153,9 +167,11 @@ static SensorBase* st_hal_create_class_sensor(STSensorHAL_iio_devices_data *data
 
 #ifdef CONFIG_ST_HAL_FACTORY_CALIBRATION
 		if (sb->IsValidClass()) {
-			err = ((HWSensorBase *)sb)->ApplyFactoryCalibrationData((char *)ST_HAL_FACTORY_ACCEL_DATA_FILENAME, &priv_data->calibration_last_modification[ST_HAL_PRIVATE_DATA_CALIBRATION_LM_ACCEL_ID]);
+			err = ((HWSensorBase *)sb)->ApplyFactoryCalibrationData((char *)ST_HAL_FACTORY_ACCEL_DATA_FILENAME,
+					&priv_data->calibration_last_modification[ST_HAL_PRIVATE_DATA_CALIBRATION_LM_ACCEL_ID]);
 			if (err < 0)
-				ALOGE("\"%s\": Failed to read factory calibration values.", data->android_name);
+				ALOGE("\"%s\": Failed to read factory calibration values.",
+				      data->android_name);
 		}
 #endif /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
 		break;
@@ -168,9 +184,11 @@ static SensorBase* st_hal_create_class_sensor(STSensorHAL_iio_devices_data *data
 
 #ifdef CONFIG_ST_HAL_FACTORY_CALIBRATION
 		if (sb->IsValidClass()) {
-			err = ((HWSensorBase *)sb)->ApplyFactoryCalibrationData((char *)ST_HAL_FACTORY_GYRO_DATA_FILENAME, &priv_data->calibration_last_modification[ST_HAL_PRIVATE_DATA_CALIBRATION_LM_GYRO_ID]);
+			err = ((HWSensorBase *)sb)->ApplyFactoryCalibrationData((char *)ST_HAL_FACTORY_GYRO_DATA_FILENAME,
+					&priv_data->calibration_last_modification[ST_HAL_PRIVATE_DATA_CALIBRATION_LM_GYRO_ID]);
 			if (err < 0)
-				ALOGE("\"%s\": Failed to read factory calibration values.", data->android_name);
+				ALOGE("\"%s\": Failed to read factory calibration values.",
+				      data->android_name);
 		}
 #endif /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
 		break;
@@ -184,7 +202,7 @@ static SensorBase* st_hal_create_class_sensor(STSensorHAL_iio_devices_data *data
 
 /*
  * st_hal_set_fullscale() - Change fullscale of iio device sensor
- * @iio_sysfs_path: iio device driver sysfs path.
+ * @device_iio_sysfs_path: iio device driver sysfs path.
  * @sensor_type: Android sensor type.
  * @sa: scale available structure.
  * @channels: iio channels informations.
@@ -192,26 +210,26 @@ static SensorBase* st_hal_create_class_sensor(STSensorHAL_iio_devices_data *data
  *
  * Return value: 0 on success, negative number on fail.
  */
-static int st_hal_set_fullscale(char *iio_sysfs_path, int sensor_type,
-				struct device_iio_scale_available *sa,
-				struct device_iio_channel_info *channels,
+static int st_hal_set_fullscale(char *device_iio_sysfs_path, int sensor_type,
+				struct device_iio_scales *sa,
+				struct device_iio_info_channel *channels,
 				int num_channels)
 {
 	double max_number = 0;
 	int err, i, c, max_value;
-	device_iio_chan_type_t iio_sensor_type;
+	device_iio_chan_type_t device_iio_sensor_type;
 
 	switch (sensor_type) {
 #ifdef CONFIG_ST_HAL_ACCEL_ENABLED
 	case SENSOR_TYPE_ACCELEROMETER:
 		max_value = CONFIG_ST_HAL_ACCEL_RANGE;
-		iio_sensor_type = DEVICE_IIO_ACC;
+		device_iio_sensor_type = DEVICE_IIO_ACC;
 		break;
 #endif /* CONFIG_ST_HAL_ACCEL_ENABLED */
 #ifdef CONFIG_ST_HAL_GYRO_ENABLED
 	case SENSOR_TYPE_GYROSCOPE:
 		max_value = CONFIG_ST_HAL_GYRO_RANGE;
-		iio_sensor_type = DEVICE_IIO_GYRO;
+		device_iio_sensor_type = DEVICE_IIO_GYRO;
 		break;
 #endif /* CONFIG_ST_HAL_GYRO_ENABLED */
 	default:
@@ -230,7 +248,9 @@ static int st_hal_set_fullscale(char *iio_sysfs_path, int sensor_type,
 	if (i == (int)sa->length)
 		i = sa->length - 1;
 
-	err = iio_utils::set_scale(iio_sysfs_path, sa->scales[i], iio_sensor_type);
+	err = device_iio_utils::set_scale(device_iio_sysfs_path,
+					  sa->scales[i],
+					  device_iio_sensor_type);
 	if (err < 0)
 		return err;
 
@@ -247,20 +267,28 @@ static int st_hal_set_fullscale(char *iio_sysfs_path, int sensor_type,
  *
  * Return value: 1 for succes, 0 in case of error
  */
-static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor, STSensorHAL_iio_devices_data *data)
+static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor,
+				 STSensorHAL_device_iio_devices_data *data)
 {
 	int err;
 	int gyro_num;
-	const char *name_channel_gyro[] = { "in_anglvel_x", "in_anglvel_y", "in_anglvel_z", "in_timestamp" };
+	const char *name_channel_gyro[] = {
+			"in_anglvel_x",
+			"in_anglvel_y",
+			"in_anglvel_z",
+			"in_timestamp"
+			};
 
-	gyro_num = iio_utils::get_device_by_name(stsensor->driver_name);
+	gyro_num = device_iio_utils::get_device_by_name(stsensor->driver_name);
 	if (gyro_num < 0) {
 		ALOGE("No IIO sensors found into /sys/bus/iio/devices/ folder.");
 
 		return 0;
 	}
 
-	err = asprintf(&data->iio_sysfs_path, "/sys/bus/iio/devices/iio:device%d", gyro_num);
+	err = asprintf(&data->device_iio_sysfs_path,
+		       "/sys/bus/iio/devices/iio:device%d",
+		       gyro_num);
 	if (err < 0) {
 		ALOGE("Unable to allocate sysfs path.");
 
@@ -269,7 +297,9 @@ static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor, ST
 
 	data->power_consumption = stsensor->power_consumption;
 
-	err = asprintf(&data->iio_sysfs_path, "/sys/bus/iio/devices/iio:device%d", gyro_num);
+	err = asprintf(&data->device_iio_sysfs_path,
+		       "/sys/bus/iio/devices/iio:device%d",
+		       gyro_num);
 	if (err < 0) {
 		ALOGE("Unable to allocate sysfs path.");
 
@@ -280,10 +310,11 @@ static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor, ST
 
 	/* Add channels to Gyroscope */
 	data->num_channels = 4;
-	data->channels = (struct device_iio_channel_info *)malloc(sizeof(struct device_iio_channel_info) * (data->num_channels));
+	data->channels =
+		(struct device_iio_info_channel *)malloc(sizeof(struct device_iio_info_channel) * (data->num_channels));
 	for (int index = 0; index < data->num_channels; index++) {
-		iio_utils::get_type(&data->channels[index],
-			data->iio_sysfs_path,
+		device_iio_utils::get_type(&data->channels[index],
+			data->device_iio_sysfs_path,
 			name_channel_gyro[index],
 			"in");
 
@@ -293,54 +324,57 @@ static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor, ST
 		if (index == 3)
 			data->channels[index].scale = 1.0f;
 		else
-			iio_utils::get_scale(data->iio_sysfs_path,
-					     &data->channels[index].scale,
-					     DEVICE_IIO_GYRO);
+			device_iio_utils::get_scale(data->device_iio_sysfs_path,
+						    &data->channels[index].scale,
+						    DEVICE_IIO_GYRO);
 		}
 
-	err = iio_utils::enable_sensor(data->iio_sysfs_path, false);
+	err = device_iio_utils::enable_sensor(data->device_iio_sysfs_path, false);
 	if (err < 0) {
 		ALOGE("Unable to disable sensor.");
 
 		return 0;
 	}
 
-	err = iio_utils::get_sampling_frequency_available(data->iio_sysfs_path, &data->sfa);
+	err = device_iio_utils::get_sampling_frequency_available(data->device_iio_sysfs_path,
+								 &data->sfa);
 	if (err < 0) {
 		ALOGE("Unable to get sampling frequency availability. (errno: %d)", err);
 
 		return 0;
 	}
 
-	err = iio_utils::get_scale_available(data->iio_sysfs_path, &data->sa,
-					     stsensor->iio_sensor_type);
+	err = device_iio_utils::get_scale_available(data->device_iio_sysfs_path, &data->sa,
+						    stsensor->device_iio_sensor_type);
 	if (err < 0) {
-		ALOGE("\"%s\": unable to get scale availability. (errno: %d)", stsensor->driver_name, err);
-		goto st_hal_load_free_iio_channels;
+		ALOGE("\"%s\": unable to get scale availability. (errno: %d)",
+		      stsensor->driver_name, err);
+		goto st_hal_load_free_device_iio_channels;
 	}
 
 	if (data->sa.length > 0) {
-		err = st_hal_set_fullscale(data->iio_sysfs_path,
+		err = st_hal_set_fullscale(data->device_iio_sysfs_path,
 					   stsensor->android_sensor_type,
 					   &data->sa,
 					   data->channels,
 					   data->num_channels);
 		if (err < 0) {
-			ALOGE("\"%s\": failed to set device full-scale. (errno: %d)", stsensor->driver_name, err);
-			goto st_hal_load_free_iio_sysfs_path;
+			ALOGE("\"%s\": failed to set device full-scale. (errno: %d)",
+			      stsensor->driver_name, err);
+			goto st_hal_load_free_device_iio_sysfs_path;
 		}
 	}
 
 	err = asprintf(&data->device_name, "%s", stsensor->driver_name);
 	if (err < 0)
-		goto st_hal_load_free_iio_channels;
+		goto st_hal_load_free_device_iio_channels;
 
 	err = asprintf(&data->android_name, "%s", stsensor->android_name);
 	if (err < 0)
 		goto st_hal_load_free_device_name;
 
 
-	data->hw_fifo_len = iio_utils::get_fifo_length(data[0].iio_sysfs_path);
+	data->hw_fifo_len = device_iio_utils::get_fifo_length(data[0].device_iio_sysfs_path);
 	data->sensor_type = stsensor->android_sensor_type;
 	data->dev_id = gyro_num;
 
@@ -349,11 +383,11 @@ static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor, ST
 st_hal_load_free_device_name:
 	free(data->device_name);
 
-st_hal_load_free_iio_channels:
+st_hal_load_free_device_iio_channels:
 	free(data->channels);
 
-st_hal_load_free_iio_sysfs_path:
-	free(data->iio_sysfs_path);
+st_hal_load_free_device_iio_sysfs_path:
+	free(data->device_iio_sysfs_path);
 
 	return 0;
 }
@@ -365,13 +399,19 @@ st_hal_load_free_iio_sysfs_path:
  *
  * Return value: acc number for succes, 0 in case of error
  */
-static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor, STSensorHAL_iio_devices_data *data)
+static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor,
+				STSensorHAL_device_iio_devices_data *data)
 {
 	int err;
 	int acc_num;
-	const char *name_channel_acc[] = { "in_accel_x", "in_accel_y", "in_accel_z", "in_timestamp" };
+	const char *name_channel_acc[] = {
+			"in_accel_x",
+			"in_accel_y",
+			"in_accel_z",
+			"in_timestamp"
+			};
 
-	acc_num = iio_utils::get_device_by_name(stsensor->driver_name);
+	acc_num = device_iio_utils::get_device_by_name(stsensor->driver_name);
 	if (acc_num < 0) {
 		ALOGE("No ACC sensors found into /sys/bus/iio/devices/ folder.");
 
@@ -379,7 +419,9 @@ static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor, STS
 	}
 
 	/* save path to acc. iio device in sysfs */
-	err = asprintf(&data->iio_sysfs_path, "/sys/bus/iio/devices/iio:device%d", acc_num);
+	err = asprintf(&data->device_iio_sysfs_path,
+		       "/sys/bus/iio/devices/iio:device%d",
+		       acc_num);
 	if (err < 0) {
 		ALOGE("Unable to allocate sysfs path.");
 
@@ -390,12 +432,13 @@ static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor, STS
 
 	/* Add channels to Accelerometer */
 	data->num_channels = 4;
-	data->channels = (struct device_iio_channel_info *)malloc(sizeof(struct device_iio_channel_info) * (data->num_channels));
+	data->channels =
+		(struct device_iio_info_channel *)malloc(sizeof(struct device_iio_info_channel) * (data->num_channels));
 	for (int index = 0; index < data->num_channels; index++) {
-		iio_utils::get_type(&data->channels[index],
-			data->iio_sysfs_path,
-			name_channel_acc[index],
-			"in");
+		device_iio_utils::get_type(&data->channels[index],
+					   data->device_iio_sysfs_path,
+					   name_channel_acc[index],
+					   "in");
 
 		data->channels[index].index = index;
 		data->channels[index].offset = 0.0f;
@@ -403,53 +446,60 @@ static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor, STS
 		if (index == 3)
 			data->channels[index].scale = 1.0f;
 		else
-			iio_utils::get_scale(data->iio_sysfs_path,
-					     &data->channels[index].scale,
-					     DEVICE_IIO_ACC);
+			device_iio_utils::get_scale(data->device_iio_sysfs_path,
+						    &data->channels[index].scale,
+						    DEVICE_IIO_ACC);
 		}
 
-	err = iio_utils::enable_sensor(data->iio_sysfs_path, false);
+	err = device_iio_utils::enable_sensor(data->device_iio_sysfs_path, false);
 	if (err < 0) {
 		ALOGE("Unable to disable sensor.");
 
 		return 0;
 	}
 
-	err = iio_utils::get_sampling_frequency_available(data->iio_sysfs_path, &data->sfa);
+	err = device_iio_utils::get_sampling_frequency_available(data->device_iio_sysfs_path,
+								 &data->sfa);
 	if (err < 0) {
-		ALOGE("Unable to get sampling frequency availability for accel. (errno: %d)", err);
+		ALOGE("Unable to get sampling frequency availability for accel. (errno: %d)",
+		      err);
 
 		return 0;
 	}
 
-	err = iio_utils::get_scale_available(data->iio_sysfs_path, &data->sa,
-					     stsensor->iio_sensor_type);
+	err = device_iio_utils::get_scale_available(data->device_iio_sysfs_path,
+						    &data->sa,
+						    stsensor->device_iio_sensor_type);
 	if (err < 0) {
-		ALOGE("\"%s\": unable to get scale availability. (errno: %d)", stsensor->driver_name, err);
-		goto st_hal_load_free_iio_channels;
+		ALOGE("\"%s\": unable to get scale availability. (errno: %d)",
+		      stsensor->driver_name, err);
+		goto st_hal_load_free_device_iio_channels;
 	}
 
 	if (data[0].sa.length > 0) {
-		err = st_hal_set_fullscale(data[0].iio_sysfs_path,
+		err = st_hal_set_fullscale(data[0].device_iio_sysfs_path,
 					   stsensor->android_sensor_type,
 					   &data[0].sa,
 					   data[0].channels,
 					   data[0].num_channels);
 		if (err < 0) {
-			ALOGE("\"%s\": failed to set device full-scale. (errno: %d)", stsensor->driver_name, err);
-			goto st_hal_load_free_iio_sysfs_path;
+			ALOGE("\"%s\": failed to set device full-scale. (errno: %d)",
+			      stsensor->driver_name, err);
+
+			goto st_hal_load_free_device_iio_sysfs_path;
 		}
 	}
 
 	err = asprintf(&data[0].device_name, "%s", stsensor->driver_name);
 	if (err < 0)
-		goto st_hal_load_free_iio_channels;
+		goto st_hal_load_free_device_iio_channels;
 
 	err = asprintf(&data[0].android_name, "%s", stsensor->android_name);
 	if (err < 0)
 		goto st_hal_load_free_device_name;
 
-	data[0].hw_fifo_len = iio_utils::get_fifo_length(data[0].iio_sysfs_path);
+	data[0].hw_fifo_len =
+		device_iio_utils::get_fifo_length(data[0].device_iio_sysfs_path);
 	data[0].sensor_type = stsensor->android_sensor_type;
 	data[0].dev_id = acc_num;
 
@@ -458,22 +508,22 @@ static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor, STS
 st_hal_load_free_device_name:
 	free(data[0].device_name);
 
-st_hal_load_free_iio_channels:
+st_hal_load_free_device_iio_channels:
 	free(data[0].channels);
 
-st_hal_load_free_iio_sysfs_path:
-	free(data[0].iio_sysfs_path);
+st_hal_load_free_device_iio_sysfs_path:
+	free(data[0].device_iio_sysfs_path);
 
 	return 0;
 }
 
 /*
- * st_hal_free_iio_devices_data() - Free iio devices data
+ * st_hal_free_device_iio_devices_data() - Free iio devices data
  * @data: iio device data.
  * @num_devices: number of allocated devices.
  */
-static void st_hal_free_iio_devices_data(STSensorHAL_iio_devices_data *data,
-					 unsigned int num_devices)
+static void st_hal_free_device_iio_devices_data(STSensorHAL_device_iio_devices_data *data,
+						unsigned int num_devices)
 {
 	unsigned int i;
 
@@ -481,7 +531,7 @@ static void st_hal_free_iio_devices_data(STSensorHAL_iio_devices_data *data,
 		free(data[i].android_name);
 		free(data[i].device_name);
 		free(data[i].channels);
-		free(data[i].iio_sysfs_path);
+		free(data[i].device_iio_sysfs_path);
 	}
 }
 
@@ -489,8 +539,8 @@ static inline int st_hal_get_handle(STSensorHAL_data *hal_data, int handle)
 {
 	if (handle >= hal_data->last_handle)
 		return hal_data->last_handle;
-	else
-		return handle;
+
+	return handle;
 }
 
 /**
@@ -517,7 +567,8 @@ static int st_hal_dev_flush(struct sensors_poll_device_1 *dev, int handle)
  *
  * Return value: 0 on success, negative number on fail.
  */
-static int st_hal_dev_inject_sensor_data(struct sensors_poll_device_1 *dev, const sensors_event_t *data)
+static int st_hal_dev_inject_sensor_data(struct sensors_poll_device_1 *dev,
+					 const sensors_event_t *data)
 {
 	STSensorHAL_data *hal_data = (STSensorHAL_data *)dev;
 
@@ -542,19 +593,25 @@ static int st_hal_dev_batch(struct sensors_poll_device_1 *dev, int handle,
 	unsigned int index = st_hal_get_handle(hal_data, handle);
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION == ST_HAL_KITKAT_VERSION)
-	if (((flags & SENSORS_BATCH_DRY_RUN) || (flags & SENSORS_BATCH_WAKE_UPON_FIFO_FULL)) && (timeout > 0)) {
+	if (((flags & SENSORS_BATCH_DRY_RUN) ||
+	    (flags & SENSORS_BATCH_WAKE_UPON_FIFO_FULL)) && (timeout > 0)) {
 		if (hal_data->sensor_classes[index]->GetMaxFifoLenght() > 0)
 			return 0;
-		else
-			return -EINVAL;
+
+		return -EINVAL;
 	}
 #else /* CONFIG_ST_HAL_ANDROID_VERSION */
 	(void)flags;
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
-	ALOGD("changed timeout=%" PRIu64 "ms pollrate_ns=%" PRIu64 "ms", timeout, period_ns);
+	ALOGD("changed timeout=%" PRIu64 "ms pollrate_ns=%" PRIu64 "ms",
+	      timeout,
+	      period_ns);
 
-	return hal_data->sensor_classes[index]->SetDelay(handle, period_ns, timeout, true);
+	return hal_data->sensor_classes[index]->SetDelay(handle,
+							 period_ns,
+							 timeout,
+							 true);
 }
 
 /**
@@ -566,7 +623,7 @@ static int st_hal_dev_batch(struct sensors_poll_device_1 *dev, int handle,
  * Return value: 0 on success, negative number on fail.
  */
 static int st_hal_dev_poll(struct sensors_poll_device_t *dev,
-						sensors_event_t *data, int count)
+			   sensors_event_t *data, int count)
 {
 	unsigned int i;
 	int err, read_size, remaining_event = count, event_read;
@@ -578,7 +635,9 @@ static int st_hal_dev_poll(struct sensors_poll_device_t *dev,
 
 	for (i = 0; i < hal_data->sensor_available; i++) {
 		if (hal_data->android_pollfd[i].revents & POLLIN) {
-			read_size = read(hal_data->android_pollfd[i].fd, data, remaining_event * sizeof(sensors_event_t));
+			read_size = read(hal_data->android_pollfd[i].fd,
+					 data,
+					 remaining_event * sizeof(sensors_event_t));
 			if (read_size <= 0)
 				continue;
 
@@ -603,7 +662,8 @@ static int st_hal_dev_poll(struct sensors_poll_device_t *dev,
  *
  * Return value: 0 on success, negative number on fail.
  */
-static int st_hal_dev_setDelay(struct sensors_poll_device_t *dev, int handle, int64_t ns)
+static int st_hal_dev_setDelay(struct sensors_poll_device_t *dev,
+			       int handle, int64_t ns)
 {
 	STSensorHAL_data *hal_data = (STSensorHAL_data *)dev;
 	unsigned int index;
@@ -620,7 +680,8 @@ static int st_hal_dev_setDelay(struct sensors_poll_device_t *dev, int handle, in
  *
  * Return value: 0 on success, negative number on fail.
  */
-static int st_hal_dev_activate(struct sensors_poll_device_t *dev, int handle, int enabled)
+static int st_hal_dev_activate(struct sensors_poll_device_t *dev,
+			       int handle, int enabled)
 {
 	STSensorHAL_data *hal_data = (STSensorHAL_data *)dev;
 	unsigned int index;
@@ -669,7 +730,10 @@ static int st_hal_read_private_data(struct st_hal_private_data *priv_data)
 	if (!private_file)
 		return -errno;
 
-	err = fread(priv_data, sizeof(struct st_hal_private_data), 1, private_file);
+	err = fread(priv_data,
+		    sizeof(struct st_hal_private_data),
+		    1,
+		    private_file);
 	if (err <= 0) {
 		fclose(private_file);
 		return -errno;
@@ -712,7 +776,9 @@ static int st_hal_write_private_data(struct st_hal_private_data *priv_data)
  */
 static void st_hal_set_default_private_data(struct st_hal_private_data *priv_data)
 {
-	memset(priv_data->calibration_last_modification, 0, ARRAY_SIZE(priv_data->calibration_last_modification) * sizeof(time_t));
+	memset(priv_data->calibration_last_modification,
+	       0,
+	       ARRAY_SIZE(priv_data->calibration_last_modification) * sizeof(time_t));
 }
 #endif /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
 
@@ -723,8 +789,8 @@ static void st_hal_set_default_private_data(struct st_hal_private_data *priv_dat
  * Return value: 0 on success, negative number on fail.
  */
 static int st_hal_open_sensors(const struct hw_module_t *module,
-				const char __attribute__((unused))*id,
-				struct hw_device_t **device)
+			       const char __attribute__((unused))*id,
+			       struct hw_device_t **device)
 {
 	bool real_sensor_class;
 	STSensorHAL_data *hal_data;
@@ -737,7 +803,7 @@ static int st_hal_open_sensors(const struct hw_module_t *module,
 	bool sensor_class_valid[ST_HAL_IIO_MAX_DEVICES];
 	int type_dependencies[SENSOR_DEPENDENCY_ID_MAX], type_index;
 	SensorBase *sensor_class, *temp_sensor_class[ST_HAL_IIO_MAX_DEVICES];
-	STSensorHAL_iio_devices_data iio_devices_data[ST_HAL_IIO_MAX_DEVICES];
+	STSensorHAL_device_iio_devices_data device_iio_devices_data[ST_HAL_IIO_MAX_DEVICES];
 	int err = -ENODEV, i, c, device_found_num, classes_available = 0, n = 0;
 
 	hal_data = (STSensorHAL_data *)malloc(sizeof(STSensorHAL_data));
@@ -772,8 +838,10 @@ static int st_hal_open_sensors(const struct hw_module_t *module,
 	}
 #endif /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
 
-	device_found_num = st_hal_load_acc_data(&ST_sensors_supported[0], &iio_devices_data[0]);
-	device_found_num += st_hal_load_gyro_data(&ST_sensors_supported[1], &iio_devices_data[1]);
+	device_found_num = st_hal_load_acc_data(&ST_sensors_supported[0],
+						&device_iio_devices_data[0]);
+	device_found_num += st_hal_load_gyro_data(&ST_sensors_supported[1],
+						  &device_iio_devices_data[1]);
 	if (device_found_num <= 0) {
 		err = device_found_num;
 		goto free_hal_data;
@@ -782,18 +850,26 @@ static int st_hal_open_sensors(const struct hw_module_t *module,
 	for (i = 0; i < device_found_num; i++) {
 
 #ifdef CONFIG_ST_HAL_FACTORY_CALIBRATION
-		sensor_class = st_hal_create_class_sensor(&iio_devices_data[i], classes_available + 1, &private_data);
+		sensor_class = st_hal_create_class_sensor(&device_iio_devices_data[i],
+							  classes_available + 1,
+							  &private_data);
 #else /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
-		sensor_class = st_hal_create_class_sensor(&iio_devices_data[i], classes_available + 1, NULL);
+		sensor_class = st_hal_create_class_sensor(&device_iio_devices_data[i],
+							  classes_available + 1,
+							  NULL);
 #endif /* CONFIG_ST_HAL_FACTORY_CALIBRATION */
 
 		if (!sensor_class) {
-			ALOGE("\"%s\": failed to create HW sensor class.", iio_devices_data[i].device_name);
+			ALOGE("\"%s\": failed to create HW sensor class.",
+			      device_iio_devices_data[i].device_name);
 			continue;
 		}
 
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_VERBOSE)
-	ALOGD("\"%s\": created HW class instance, handle: %d (sensor type: %d).", sensor_class->GetName(), sensor_class->GetHandle(), sensor_class->GetType());
+	ALOGD("\"%s\": created HW class instance, handle: %d (sensor type: %d).",
+	      sensor_class->GetName(),
+	      sensor_class->GetHandle(),
+	      sensor_class->GetType());
 #endif /* CONFIG_ST_HAL_DEBUG_LEVEL */
 
 		temp_sensor_class[classes_available] = sensor_class;
@@ -816,23 +892,28 @@ static int st_hal_open_sensors(const struct hw_module_t *module,
 		temp_sensor_class[i]->GetDepenciesTypeList(type_dependencies);
 		type_index = 0;
 
-		while((type_dependencies[type_index] > 0) && (type_index < SENSOR_DEPENDENCY_ID_MAX)) {
+		while((type_dependencies[type_index] > 0) &&
+		      (type_index < SENSOR_DEPENDENCY_ID_MAX)) {
 			err = 0;
 
 			for (c = 0; c < classes_available; c++) {
-				if ((type_dependencies[type_index] == temp_sensor_class[c]->GetType()) && (sensor_class_valid[c])) {
+				if ((type_dependencies[type_index] == temp_sensor_class[c]->GetType()) &&
+				    (sensor_class_valid[c])) {
 					err = temp_sensor_class[i]->AddSensorDependency(temp_sensor_class[c]);
 					break;
 				}
 			}
 			if ((c == classes_available) || (err < 0)) {
-				ALOGE("\"%s\": failed to add dependency (sensor type dependency: %d).", temp_sensor_class[i]->GetName(), type_dependencies[type_index]);
+				ALOGE("\"%s\": failed to add dependency (sensor type dependency: %d).",
+				      temp_sensor_class[i]->GetName(),
+				      type_dependencies[type_index]);
 
 				while (type_index > 0) {
 					type_index--;
 
 					for (c = 0; c < classes_available; c++) {
-						if ((type_dependencies[type_index] == temp_sensor_class[c]->GetType()) && (sensor_class_valid[c])) {
+						if ((type_dependencies[type_index] == temp_sensor_class[c]->GetType()) &&
+						    (sensor_class_valid[c])) {
 							temp_sensor_class[i]->RemoveSensorDependency(temp_sensor_class[c]);
 							break;
 						}
@@ -883,9 +964,13 @@ failed_to_add_dependency:
 	for (i = 0; i < classes_available; i++) {
 		if (sensor_class_valid[i]) {
 			if (temp_sensor_class[i]->hasDataChannels()) {
-				err = pthread_create(&hal_data->data_threads[j], NULL, &SensorBase::ThreadDataWork, (void *)temp_sensor_class[i]);
+				err = pthread_create(&hal_data->data_threads[j],
+						     NULL,
+						     &SensorBase::ThreadDataWork,
+						     (void *)temp_sensor_class[i]);
 				if (err < 0) {
-					ALOGE("%s: Failed to create IIO data pThread.", temp_sensor_class[i]->GetName());
+					ALOGE("%s: Failed to create IIO data pThread.",
+					      temp_sensor_class[i]->GetName());
 					sensor_class_valid[i] = false;
 					continue;
 				}
@@ -893,9 +978,13 @@ failed_to_add_dependency:
 			}
 
 			if (temp_sensor_class[i]->hasEventChannels()) {
-				err = pthread_create(&hal_data->events_threads[k], NULL, &SensorBase::ThreadEventsWork, (void *)temp_sensor_class[i]);
+				err = pthread_create(&hal_data->events_threads[k],
+						     NULL,
+						     &SensorBase::ThreadEventsWork,
+						     (void *)temp_sensor_class[i]);
 				if (err < 0) {
-					ALOGE("%s: Failed to create IIO events pThread.", temp_sensor_class[i]->GetName());
+					ALOGE("%s: Failed to create IIO events pThread.",
+					      temp_sensor_class[i]->GetName());
 					sensor_class_valid[i] = false;
 					continue;
 				}
@@ -917,7 +1006,8 @@ failed_to_add_dependency:
 
 	hal_data->sensor_available = n;
 
-	st_hal_free_iio_devices_data(iio_devices_data, device_found_num);
+	st_hal_free_device_iio_devices_data(device_iio_devices_data,
+					    device_found_num);
 
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_INFO)
 	ALOGD("%d sensors available and ready.", hal_data->sensor_available);
@@ -933,7 +1023,8 @@ destroy_classes:
 	for (i = 0; i < classes_available; i ++)
 		delete temp_sensor_class[i];
 
-	st_hal_free_iio_devices_data(iio_devices_data, device_found_num);
+	st_hal_free_device_iio_devices_data(device_iio_devices_data,
+					    device_found_num);
 free_hal_data:
 	free(hal_data);
 
@@ -948,7 +1039,7 @@ free_hal_data:
  * Return value: number of sensors available.
  */
 static int st_hal_get_sensors_list(struct sensors_module_t *module,
-						struct sensor_t const **list)
+				   struct sensor_t const **list)
 {
 	STSensorHAL_data *hal_data = (STSensorHAL_data *)module->common.dso;
 
@@ -998,7 +1089,8 @@ static int st_hal_set_operation_mode(unsigned int mode)
 {
 	int err, i;
 	bool enable_injection = false;
-	STSensorHAL_data *hal_data = (STSensorHAL_data *)HAL_MODULE_INFO_SYM.common.dso;
+	STSensorHAL_data *hal_data =
+		(STSensorHAL_data *)HAL_MODULE_INFO_SYM.common.dso;
 
 	switch (mode) {
 	case SENSOR_HAL_NORMAL_MODE:
@@ -1030,3 +1122,4 @@ rollback_operation_mode:
 	return -EINVAL;
 }
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
+

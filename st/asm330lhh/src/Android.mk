@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2016 STMicroelectronics
+# Copyright (C) 2013-2018 STMicroelectronics
 # Denis Ciocca - Motion MEMS Product Div.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,6 @@ ifneq ($(TARGET_SIMULATOR),true)
 
 LOCAL_PATH := $(call my-dir)
 ST_HAL_ROOT_PATH := $(call my-dir)
-
 
 include $(CLEAR_VARS)
 include $(ST_HAL_ROOT_PATH)/../hal_config
@@ -41,10 +40,7 @@ endif # ST_HAL_ANDROID_VERSION
 
 LOCAL_MODULE_OWNER := STMicroelectronics
 
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/ \
-			$(LOCAL_PATH)/../ \
-			$(LOCAL_PATH)/../linux/tools/iio/ \
-			$(LOCAL_PATH)/../linux/iio/
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/
 
 LOCAL_CFLAGS += -DLOG_TAG=\"SensorHAL\" -Wall \
 		-Wunused-parameter -Wunused-value -Wunused-function
@@ -64,7 +60,7 @@ LOCAL_SRC_FILES := \
 		ChangeODRTimestampStack.cpp \
 		SensorBase.cpp \
 		HWSensorBase.cpp \
-		../linux/tools/iio/iio_utils.cpp
+		utils.cpp
 
 ifdef CONFIG_ST_HAL_ACCEL_ENABLED
 LOCAL_SRC_FILES += Accelerometer.cpp

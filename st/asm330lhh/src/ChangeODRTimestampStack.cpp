@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics Change ODR Timestamp Stack Class
  *
- * Copyright 2015-2016 STMicroelectronics Inc.
+ * Copyright 2015-2018 STMicroelectronics Inc.
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -21,7 +21,8 @@ ChangeODRTimestampStack::~ChangeODRTimestampStack()
 
 }
 
-int ChangeODRTimestampStack::writeElement(int64_t timestamp, int64_t newpollrate)
+int ChangeODRTimestampStack::writeElement(int64_t timestamp,
+					  int64_t newpollrate)
 {
 	pthread_mutex_lock(&data_mutex);
 

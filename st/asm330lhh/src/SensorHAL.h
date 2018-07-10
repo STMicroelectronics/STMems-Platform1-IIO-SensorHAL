@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 STMicroelectronics
+ * Copyright (C) 2015-2018 STMicroelectronics
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,42 +26,42 @@
 #include "common_data.h"
 
 #ifndef ARRAY_SIZE
-#define ARRAY_SIZE(a)		(int)((sizeof(a) / sizeof(*(a))) / \
-					static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
+#define ARRAY_SIZE(a)	(int)((sizeof(a) / sizeof(*(a))) / \
+			      static_cast<size_t>(!(sizeof(a) % sizeof(*(a)))))
 #endif
 
 /*
  * IIO driver sensors names
  */
-#define ST_SENSORS_LIST_1				"asm330lhh"
+#define ST_SENSORS_LIST_1			"asm330lhh"
 
 /*
  * IIO driver sensors suffix for sensors
  */
-#define ACCEL_NAME_SUFFIX_IIO				"_accel"
-#define GYRO_NAME_SUFFIX_IIO				"_gyro"
+#define ACCEL_NAME_SUFFIX_IIO			"_accel"
+#define GYRO_NAME_SUFFIX_IIO			"_gyro"
 
-#define ST_HAL_WAKEUP_SUFFIX_IIO			"_wk"
+#define ST_HAL_WAKEUP_SUFFIX_IIO		"_wk"
 
 #define ST_HAL_NEW_SENSOR_SUPPORTED(DRIVER_NAME, ANDROID_SENSOR_TYPE, IIO_SENSOR_TYPE, ANDROID_NAME, POWER_CONSUMPTION) \
 	{ \
 	.driver_name = DRIVER_NAME, \
 	.android_name = ANDROID_NAME, \
 	.android_sensor_type = ANDROID_SENSOR_TYPE,\
-	.iio_sensor_type = IIO_SENSOR_TYPE, \
+	.device_iio_sensor_type = IIO_SENSOR_TYPE, \
 	.power_consumption = POWER_CONSUMPTION,\
 	},
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_MARSHMALLOW_VERSION)
-#define ST_HAL_IIO_DEVICE_API_VERSION			SENSORS_DEVICE_API_VERSION_1_4
+#define ST_HAL_IIO_DEVICE_API_VERSION		SENSORS_DEVICE_API_VERSION_1_4
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION == ST_HAL_LOLLIPOP_VERSION)
-#define ST_HAL_IIO_DEVICE_API_VERSION			SENSORS_DEVICE_API_VERSION_1_3
+#define ST_HAL_IIO_DEVICE_API_VERSION		SENSORS_DEVICE_API_VERSION_1_3
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION == ST_HAL_KITKAT_VERSION)
-#define ST_HAL_IIO_DEVICE_API_VERSION			SENSORS_DEVICE_API_VERSION_1_1
+#define ST_HAL_IIO_DEVICE_API_VERSION		SENSORS_DEVICE_API_VERSION_1_1
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 struct STSensorHAL_data {
@@ -80,3 +80,4 @@ struct STSensorHAL_data {
 } typedef STSensorHAL_data;
 
 #endif /* ST_SENSOR_HAL_H */
+

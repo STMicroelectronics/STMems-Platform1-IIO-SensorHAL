@@ -50,7 +50,7 @@ CONFIGURING THE SENSOR HAL
 
    "make -f Makefile_config sensors-menuconfig"	Text based color menus, radiolists & dialogs.
 
-   "make -f Makefile_configsensors-cleanconf"	Delete hal_config, hal_config.old and configuration.h files.
+   "make -f Makefile_config sensors-cleanconf"	Delete hal_config, hal_config.old and configuration.h files.
 
 
 --> Android Version pre-release
@@ -109,3 +109,4 @@ CHANGELOG:
    v3.1.5: Added support for Android N. Added support for different kernel versions
    v3.1.6: Add support to Android O
    v3.1.7: Move iio_utils in separated shared library
+   v3.1.8: Reworked library and removed dead code
