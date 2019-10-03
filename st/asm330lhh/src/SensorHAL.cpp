@@ -377,6 +377,7 @@ static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor,
 	data->hw_fifo_len = device_iio_utils::get_fifo_length(data[0].device_iio_sysfs_path);
 	data->sensor_type = stsensor->android_sensor_type;
 	data->dev_id = gyro_num;
+	data->wake_up_sensor = 0;
 
 	return 1;
 
@@ -502,6 +503,7 @@ static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor,
 		device_iio_utils::get_fifo_length(data[0].device_iio_sysfs_path);
 	data[0].sensor_type = stsensor->android_sensor_type;
 	data[0].dev_id = acc_num;
+	data[0].wake_up_sensor = 0;
 
 	return 1;
 
