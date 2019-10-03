@@ -146,13 +146,17 @@ int device_iio_utils::enable_channels(const char *device_dir, bool enable)
 			    "_en")) {
 			sprintf(filename, "%s/%s", dir, ent->d_name);
 			sysfsfp = fopen(filename, "r+");
-			if (!sysfsfp)
+			if (!sysfsfp) {
+				closedir(dp);
 				return -errno;
+			}
 
 			fprintf(sysfsfp, "%d", enable);
 			fclose(sysfsfp);
 		}
 	}
+
+	closedir(dp);
 
 	return 0;
 }
@@ -460,6 +464,8 @@ int device_iio_utils::get_type(struct device_iio_info_channel *channel,
 			fclose(sysfsfp);
 		}
 	}
+
+	closedir(dp);
 
 	return 0;
 }
