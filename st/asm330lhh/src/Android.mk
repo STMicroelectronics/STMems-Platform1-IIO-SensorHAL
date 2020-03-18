@@ -23,6 +23,28 @@ ST_HAL_ROOT_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 include $(ST_HAL_ROOT_PATH)/../hal_config
 
+ANDROID_VERSION_CONFIG_HAL=$(LOCAL_PATH)/../android_data_config
+$(shell source $(ANDROID_VERSION_CONFIG_HAL))
+
+LOCAL_SHARED_LIBRARIES := \
+	libcutils \
+	libhardware \
+	libhardware_legacy \
+	libutils \
+	liblog \
+	libdl \
+	libc
+
+LOCAL_HEADER_LIBRARIES := \
+	libhardware_headers
+
+ifeq ($(shell test $(ST_HAL_ANDROID_VERSION) -gt 4; echo $$?),0)
+LOCAL_SHARED_LIBRARIES += libstagefright_foundation
+LOCAL_HEADER_LIBRARIES += libstagefright_foundation_headers
+endif # ST_HAL_ANDROID_VERSION
+
+LOCAL_VENDOR_MODULE := true
+
 LOCAL_PRELINK_MODULE := false
 LOCAL_PROPRIETARY_MODULE := true
 
@@ -40,7 +62,10 @@ endif # ST_HAL_ANDROID_VERSION
 
 LOCAL_MODULE_OWNER := STMicroelectronics
 
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/ \
+			$(LOCAL_PATH)/../
+
+#			$(LOCAL_PATH)/../../../../hardware/libhardware/modules/sensors/dynamic_sensor/
 
 LOCAL_CFLAGS += -DLOG_TAG=\"SensorHAL\" -Wall \
 		-Wunused-parameter -Wunused-value -Wunused-function
@@ -50,7 +75,6 @@ LOCAL_CFLAGS += -g -O0
 LOCAL_LDFLAGS += -Wl,-Map,$(LOCAL_PATH)/../$(LOCAL_MODULE).map
 endif # DEBUG
 
-LOCAL_SHARED_LIBRARIES := liblog libcutils libutils libdl libc
 
 LOCAL_SRC_FILES := \
 		SensorHAL.cpp \
