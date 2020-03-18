@@ -23,7 +23,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <android/sensor.h>
+
+#if CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_OREO_VERSION
+#include <log/log.h>
+#else
 #include <cutils/log.h>
+#endif /* use log/log.h start from android 8 major version */
 
 #include <gui/SensorManager.h>
 #include <gui/Sensor.h>

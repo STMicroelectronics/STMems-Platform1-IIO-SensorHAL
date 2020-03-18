@@ -18,6 +18,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <endian.h>
+#include <unistd.h>
 
 #include "SensorHAL.h"
 #include "Accelerometer.h"
