@@ -253,14 +253,14 @@ int device_iio_utils::get_sampling_frequency_available(char *device_dir,
 	if (err < 0)
 		return err;
 
-	err = sysfs_read_str(sf_filaname, line, 100);
+	err = sysfs_read_str(sf_filaname, line, sizeof(line));
 	if (err < 0)
 		return err;
 
-	pch = strtok(line," ,.");
+	pch = strtok(line," ,");
 	while (pch != NULL) {
-		sfa->freq[sfa->length] = atoi(pch);
-		pch = strtok(NULL, " ,.");
+		sfa->freq[sfa->length] = atof(pch);
+		pch = strtok(NULL, " ,");
 		sfa->length++;
 
 		if (sfa->length >= DEVICE_IIO_MAX_SAMP_FREQ_AVAILABLE)
