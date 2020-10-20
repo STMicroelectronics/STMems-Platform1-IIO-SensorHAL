@@ -38,6 +38,21 @@ config ST_HAL_ANDROID_VERSION
         int
         default 4
 endif
+if (ENV_ANDROID_VERSION = 5)
+config ST_HAL_ANDROID_VERSION
+        int
+        default 5
+endif
+if (ENV_ANDROID_VERSION = 6)
+config ST_HAL_ANDROID_VERSION
+        int
+        default 6
+endif
+if (ENV_ANDROID_VERSION = 7)
+config ST_HAL_ANDROID_VERSION
+        int
+        default 7
+endif
 
 source "$ST_HAL_PATH/Kconfig_menu/Kconfig_enable_sensors"
 source "$ST_HAL_PATH/Kconfig_menu/Kconfig_common"
