@@ -22,6 +22,12 @@
 
 /* class Gyroscope */
 class Gyroscope : public HWSensorBaseWithPollrate {
+private:
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
+#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
+	size_t getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames);
+#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
+#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 public:
 	Gyroscope(HWSensorBaseCommonData *data, const char *name,
 		  struct device_iio_sampling_freqs *sfa, int handle,
