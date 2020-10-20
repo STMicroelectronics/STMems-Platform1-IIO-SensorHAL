@@ -32,6 +32,12 @@ Accelerometer::Accelerometer(HWSensorBaseCommonData *data, const char *name,
 	sensor_t_data.resolution = data->channels[0].scale;
 	sensor_t_data.maxRange =
 		sensor_t_data.resolution * (pow(2, data->channels[0].bits_used - 1) - 1);
+
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
+#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
+	supportsSensorAdditionalInfo = true;
+#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
+#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 }
 
 Accelerometer::~Accelerometer()
@@ -94,3 +100,34 @@ void Accelerometer::ProcessData(SensorBaseData *data)
 	HWSensorBaseWithPollrate::ProcessData(data);
 }
 
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
+#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
+size_t Accelerometer::getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames)
+{
+	additional_info_event_t XL_SAI_Placement_event, *p;
+	additional_info_event_t *p_custom_XL_SAI_Placement_event = NULL;
+
+	// place for ODM/OEM to fill custom_XL_SAI_Placement_event
+
+	if (!p_custom_XL_SAI_Placement_event) {
+		XL_SAI_Placement_event = defaultSensorPlacement_additional_info_event;
+		ALOGD("%s: using Sensor Additional Info Placement default", GetName());
+	} else {
+		XL_SAI_Placement_event = *p_custom_XL_SAI_Placement_event;
+	}
+
+	size_t frames = 1;
+
+	p = (additional_info_event_t *)calloc(frames , sizeof(additional_info_event_t));
+	if (!p) {
+		ALOGE("%s: Failed to allocate memory.", GetName());
+		return (size_t)-ENOMEM;
+	}
+	for (size_t i = 0; i < frames; i++)
+		memcpy(&p[i], &XL_SAI_Placement_event, sizeof(additional_info_event_t));
+
+	*array_sensorAdditionalInfoPLFrames = p;
+	return sizeof(**array_sensorAdditionalInfoPLFrames)/sizeof(*array_sensorAdditionalInfoPLFrames[0]);
+}
+#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
+#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
