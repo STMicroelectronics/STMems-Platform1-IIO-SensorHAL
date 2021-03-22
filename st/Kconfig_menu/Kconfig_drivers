@@ -25,4 +25,14 @@ config ST_HAL_ASM330LHH_ENABLED
 	  - Accelerometer;
 	  - Gyroscope;
 
+config ST_HAL_ASM330LHHX_ENABLED
+	bool "ASM330LHHX sensor"
+	default y
+	help
+	  Enable support for ASM330LHHX combo sensor.
+
+	  Sensors supported:
+	  - Accelerometer;
+	  - Gyroscope;
+
 endmenu # IIO drivers configuration

@@ -23,13 +23,6 @@
 
 #include "SensorBase.h"
 
-#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
-#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
-#include "SensorAdditionalInfo.h"
-#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
-#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
-
-
 extern "C" {
 	#include "utils.h"
 };
@@ -59,11 +52,6 @@ class HWSensorBaseWithPollrate;
  */
 class HWSensorBase : public SensorBase {
 private:
-#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
-#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
-	void WriteSensorAdditionalInfoFrames(additional_info_event_t array_sensorAdditionaInfoDataFrames[], size_t frames_numb);
-#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
-#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 protected:
 	ssize_t scan_size;
 	struct pollfd pollfd_iio[2];
@@ -82,20 +70,6 @@ protected:
 
 	int WriteBufferLenght(unsigned int buf_len);
 
-#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
-#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
-	bool supportsSensorAdditionalInfo;
-	const additional_info_event_t defaultSensorPlacement_additional_info_event = {
-		.type = AINFO_SENSOR_PLACEMENT,
-		.serial = 0,
-		.data_float = {	1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
-	};
-	virtual size_t getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames);
-	void WriteSensorAdditionalInfoReport(additional_info_event_t array_sensorAdditionaInfoDataFrames[], size_t frames);
-	void getSensorAdditionalInfoDataFramesArray(additional_info_event_t **array_sensorAdditionalInfoDataFrames, size_t *p_array_size);
-#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
-#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
-
 public:
 	HWSensorBase(HWSensorBaseCommonData *data, const char *name,
 		     int handle, int sensor_type, unsigned int hw_fifo_len,
@@ -112,7 +86,6 @@ public:
 	int ApplyFactoryCalibrationData(char *filename,
 					time_t *last_modification);
 
-	virtual void ProcessData(SensorBaseData *data);
 	virtual void ProcessEvent(struct device_iio_events *event_data);
 	virtual int FlushData(int handle, bool lock_en_mute);
 	virtual void ProcessFlushData(int handle, int64_t timestamp);
