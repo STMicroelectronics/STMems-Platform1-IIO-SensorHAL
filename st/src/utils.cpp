@@ -120,6 +120,13 @@ int device_iio_utils::sysfs_read_int(char *file, int *val)
 	return ret;
 }
 
+int device_iio_utils::check_file(char *filename)
+{
+	struct stat info;
+
+	return stat(filename, &info);
+}
+
 int device_iio_utils::enable_channels(const char *device_dir, bool enable)
 {
 	char dir[DEVICE_IIO_MAX_FILENAME_LEN + 1];
@@ -128,7 +135,7 @@ int device_iio_utils::enable_channels(const char *device_dir, bool enable)
 	FILE *sysfsfp;
 	DIR *dp;
 
-	if (strlen(device_dir) + 
+	if (strlen(device_dir) +
 		strlen("scan_elements") + 1 > DEVICE_IIO_MAX_FILENAME_LEN)
 		return -1;
 
@@ -138,7 +145,7 @@ int device_iio_utils::enable_channels(const char *device_dir, bool enable)
 		return -errno;
 
 	while (ent = readdir(dp), ent != NULL) {
-	if (strlen(dir) + 
+	if (strlen(dir) +
 		strlen(ent->d_name) > DEVICE_IIO_MAX_FILENAME_LEN)
 		continue;
 
@@ -175,7 +182,7 @@ int device_iio_utils::get_device_by_name(const char *name)
 	dp = opendir(device_iio_dir);
 	if (NULL == dp)
 		return -ENODEV;
- 
+
 	for (ent = readdir(dp); ent; ent = readdir(dp)) {
 		if (strlen(ent->d_name) <= strlen(device_iio_device_name) ||
 		    !strcmp(ent->d_name, ".") ||
@@ -262,7 +269,6 @@ int device_iio_utils::get_sampling_frequency_available(char *device_dir,
 		sfa->freq[sfa->length] = atof(pch);
 		pch = strtok(NULL, " ,");
 		sfa->length++;
-
 		if (sfa->length >= DEVICE_IIO_MAX_SAMP_FREQ_AVAILABLE)
 			break;
 	}
@@ -280,31 +286,40 @@ int device_iio_utils::get_fifo_length(const char *device_dir)
 	ret = snprintf(tmp_filaname, DEVICE_IIO_MAX_FILENAME_LEN,
 		       "%s/%s", device_dir, device_iio_hw_fifo_length);
 	if (ret < 0)
-		return -ENOMEM;
+		return 0;
 
 	ret = sysfs_read_int(tmp_filaname, &len);
 	if (ret < 0 || len <= 0)
-		return ret;
+		return 0;
 
 	/* write "len * 2" -> <iio:devicex>/buffer/length */
 	ret = snprintf(tmp_filaname, DEVICE_IIO_MAX_FILENAME_LEN,
 		       "%s/%s", device_dir, device_iio_buffer_length);
 	if (ret < 0)
-		return -ENOMEM;
+		goto out;
 
 	ret = sysfs_write_int(tmp_filaname, 2 * len);
 	if (ret < 0)
-		return ret;
+		goto out;;
 
 	/* write "1" -> <iio:devicex>/hwfifo_enabled */
 	ret = snprintf(tmp_filaname, DEVICE_IIO_MAX_FILENAME_LEN,
 		       "%s/%s", device_dir, device_iio_hw_fifo_enabled);
 	if (ret < 0)
-		return -ENOMEM;
+		goto out;
+
+	/* used for compatibility with old iio API */
+	ret = check_file(tmp_filaname);
+	if (ret < 0 && errno == ENOENT)
+		goto out;
 
 	ret = sysfs_write_int(tmp_filaname, 1);
+	if (ret < 0) {
+		ALOGE("Failed to enable hw fifo: %s.", tmp_filaname);
+	}
 
-	return ret < 0 ? ret : len;
+out:
+	return len;
 }
 
 int device_iio_utils::set_sampling_frequency(char *device_dir,
@@ -414,15 +429,15 @@ int device_iio_utils::get_type(struct device_iio_info_channel *channel,
 	char filename[DEVICE_IIO_MAX_FILENAME_LEN + 1];
 
 	/* Check string len */
-	if (strlen(device_dir) + 
+	if (strlen(device_dir) +
 	    strlen("scan_elements") + 1 > DEVICE_IIO_MAX_FILENAME_LEN)
 		return -1;
 
-	if (strlen(name) + 
+	if (strlen(name) +
 	    strlen("_type") + 1 > DEVICE_IIO_MAX_FILENAME_LEN)
 		return -1;
 
-	if (strlen(post) + 
+	if (strlen(post) +
 	    strlen("_type") + 1 > DEVICE_IIO_MAX_FILENAME_LEN)
 		return -1;
 
@@ -498,7 +513,7 @@ int device_iio_utils::get_scale_available(const char *device_dir,
 	}
 
 	/* Check string len */
-	if (strlen(device_dir) + 
+	if (strlen(device_dir) +
 		strlen(avl_name) + 1 > DEVICE_IIO_MAX_FILENAME_LEN)
 		return -1;
 
@@ -537,7 +552,7 @@ int device_iio_utils::support_injection_mode(const char *device_dir)
 	char tmp_filaname[DEVICE_IIO_MAX_FILENAME_LEN + 1];
 
 	/* Check string len */
-	if (strlen(device_dir) + 
+	if (strlen(device_dir) +
 	    strlen(device_iio_injection_mode_enable) +
 	    1 > DEVICE_IIO_MAX_FILENAME_LEN)
 		return -1;
@@ -581,7 +596,7 @@ int device_iio_utils::set_injection_mode(const char *device_dir, bool enable)
 	return ret < 0 ? -ENOMEM : sysfs_write_int(tmp_filaname, enable);
 }
 
-int device_iio_utils::inject_data(const char *device_dir, unsigned char *data, 
+int device_iio_utils::inject_data(const char *device_dir, unsigned char *data,
 				  int len, device_iio_chan_type_t device_type)
 {
 	char *injection_filename;
@@ -602,7 +617,7 @@ int device_iio_utils::inject_data(const char *device_dir, unsigned char *data,
 	}
 
 	/* Check string len */
-	if (strlen(device_dir) + 
+	if (strlen(device_dir) +
 		strlen(injection_filename) + 1 > DEVICE_IIO_MAX_FILENAME_LEN)
 		return -1;
 
@@ -617,4 +632,3 @@ int device_iio_utils::inject_data(const char *device_dir, unsigned char *data,
 
 	return ret;
 }
-

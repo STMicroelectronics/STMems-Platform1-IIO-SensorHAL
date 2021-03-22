@@ -86,6 +86,7 @@ class device_iio_utils {
 		static int sysfs_write_scale(char *file, float val);
 		static int sysfs_read_scale(char *file, float *val);
 		static int enable_channels(const char *device_dir, bool enable);
+		static int check_file(char *filename);
 
 	public:
 		static int get_device_by_name(const char *name);
@@ -105,13 +106,13 @@ class device_iio_utils {
 		static int get_type(struct device_iio_info_channel *channel,
 				    const char *device_dir, const char *name,
 				    const char *post);
-		
+
 		static int get_scale_available(const char *device_dir,
 					       struct device_iio_scales *sa,
 					       device_iio_chan_type_t device_type);
 		static int support_injection_mode(const char *device_dir);
 		static int set_injection_mode(const char *device_dir, bool enable);
-		static int inject_data(const char *device_dir, unsigned char *data, 
+		static int inject_data(const char *device_dir, unsigned char *data,
 				       int len, device_iio_chan_type_t device_type);
 };
 

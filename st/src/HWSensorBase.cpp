@@ -33,6 +33,8 @@ static int size_from_channelarray(struct device_iio_info_channel *channels,
 	int bytes = 0, i;
 
 	for (i = 0; i < num_channels; i++) {
+		channels[i].location = 0;
+
 		if (channels[i].bytes == 0)
 			continue;
 
@@ -124,7 +126,6 @@ static int ProcessScanData(uint8_t *data,
 	int k;
 
 	for (k = 0; k < num_channels; k++) {
-
 		sensor_out_data->offset[k] = 0;
 
 		switch (channels[k].bytes) {
@@ -217,7 +218,6 @@ static int ProcessInjectionData(float *data,
 	return num_channels;
 }
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
-
 
 HWSensorBase::HWSensorBase(HWSensorBaseCommonData *data,
 			   const char *name,
@@ -370,12 +370,6 @@ int HWSensorBase::Enable(int handle, bool enable, bool lock_en_mutex)
 	int err = 0;
 	bool old_status, old_status_no_handle;
 
-#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
-#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
-	additional_info_event_t *array_sensorAdditionalInfoDataFrames = nullptr;
-	size_t frames;
-#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
-#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 	if (lock_en_mutex)
 		pthread_mutex_lock(&enable_mutex);
@@ -406,15 +400,9 @@ int HWSensorBase::Enable(int handle, bool enable, bool lock_en_mutex)
 			sensor_my_enable = elapsedRealtimeNano();
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
 #if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
-			if (supportsSensorAdditionalInfo) {
-				frames = getSensorAdditionalInfoPayLoadFramesArray(&array_sensorAdditionalInfoDataFrames);
-				if (array_sensorAdditionalInfoDataFrames) {
-					ALOGD("%s : %s, ENABLE: Sending Report.", GetName(), __func__);
-					if (frames > 0)
-						WriteSensorAdditionalInfoReport(array_sensorAdditionalInfoDataFrames, frames);
-					free(array_sensorAdditionalInfoDataFrames);
-				}
-			}
+			ALOGD("%s:SAINFO Report: ENABLE.", GetName());
+			WriteSAIReportToPipe();
+			ALOGD("%s : SAI ENABLE Report.", GetName());
 #endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 		} else {
@@ -568,30 +556,6 @@ void HWSensorBase::ProcessEvent(struct device_iio_events *event_data)
 				 event_data->event_timestamp);
 }
 
-void HWSensorBase::ProcessData(SensorBaseData *data)
-{
-	SensorBase::ProcessData(data);
-
-#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
-#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
-	additional_info_event_t *array_sensorAdditionalInfoPLFrames = nullptr;
-	size_t frames;
-
-	if (data->flush_event_handle == sensor_t_data.handle) {
-		if (supportsSensorAdditionalInfo) {
-			frames = getSensorAdditionalInfoPayLoadFramesArray(&array_sensorAdditionalInfoPLFrames);
-			if (array_sensorAdditionalInfoPLFrames) {
-				ALOGD("%s %s: FLUSH: Sending Report.", GetName(), __func__);
-				if (frames > 0)
-					WriteSensorAdditionalInfoReport(array_sensorAdditionalInfoPLFrames, frames);
-				free(array_sensorAdditionalInfoPLFrames);
-			}
-		}
-	}
-#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
-#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
-}
-
 int HWSensorBase::FlushData(int handle, bool lock_en_mutex)
 {
 	int err;
@@ -651,9 +615,16 @@ void HWSensorBase::ProcessFlushData(int __attribute__((unused))handle,
 			ALOGE("%s: Failed to write Flush event into stack.",
 			      GetName());
 	} else {
-		if (flush_handle == sensor_t_data.handle)
+		if (flush_handle == sensor_t_data.handle) {
 			WriteFlushEventToPipe();
-		else {
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
+#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
+			ALOGD("%s:SAINFO Report: FLUSH.", GetName());
+			WriteSAIReportToPipe();
+			ALOGD("%s : SAI FLUSH Report.", GetName());
+#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
+#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
+		} else {
 			for (i = 0; i < push_data.num; i++)
 				push_data.sb[i]->ProcessFlushData(flush_handle,
 								  timestamp);
@@ -662,50 +633,6 @@ void HWSensorBase::ProcessFlushData(int __attribute__((unused))handle,
 
 	pthread_mutex_unlock(&sample_in_processing_mutex);
 }
-
-
-#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
-#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
-void HWSensorBase::WriteSensorAdditionalInfoFrames(additional_info_event_t array_sensorAdditionaInfoDataFrames[], size_t frames_numb)
-{
-
-	for (size_t i = 0; i < frames_numb; ++i) {
-		ALOGV("%s : Before: item #: %zu of %zu",__func__, (i+1), frames_numb);
-		SensorBase::WriteSensorAdditionalInfoFrameToPipe(&array_sensorAdditionaInfoDataFrames[i]);
-		ALOGV("%s : Frame #:(%zu) of %zu sent.", __func__, (i=1),frames_numb);
-	}
-
-}
-
-
-void HWSensorBase::WriteSensorAdditionalInfoReport(additional_info_event_t array_sensorAdditionaInfoDataFrames[], size_t frames_numb)
-{
-	const additional_info_event_t *begin_additional_info = SensorAdditionalInfoEvent::getBeginFrameEvent();
-
-	const additional_info_event_t *end_additional_info = SensorAdditionalInfoEvent::getEndFrameEvent();
-
-	SensorBase::WriteSensorAdditionalInfoFrameToPipe(const_cast<additional_info_event_t*>(begin_additional_info));
-	WriteSensorAdditionalInfoFrames(array_sensorAdditionaInfoDataFrames, frames_numb);
-	SensorBase::WriteSensorAdditionalInfoFrameToPipe(const_cast<additional_info_event_t*>(end_additional_info));
-	ALOGD("%s : Sensor Additional Info Report sent.", __func__);
-
-}
-
-size_t HWSensorBase::getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames)
-{
-	size_t frames = 1;
-
-	*array_sensorAdditionalInfoPLFrames = (additional_info_event_t *)malloc(frames * sizeof(additional_info_event_t));
-	if (!*array_sensorAdditionalInfoPLFrames) {
-		ALOGE("%s: Failed to allocate memory.", GetName());
-		return (size_t)-ENOMEM;
-	}
-
-	*array_sensorAdditionalInfoPLFrames[0] = defaultSensorPlacement_additional_info_event;
-	return sizeof(**array_sensorAdditionalInfoPLFrames)/sizeof(*array_sensorAdditionalInfoPLFrames[0]);
-}
-#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
-#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 void HWSensorBase::ThreadDataTask()
 {
@@ -723,8 +650,8 @@ void HWSensorBase::ThreadDataTask()
 
 	data = (uint8_t *)malloc(hw_fifo_len * scan_size * HW_SENSOR_BASE_DEFAULT_IIO_BUFFER_LEN * sizeof(uint8_t));
 	if (!data) {
-		ALOGE("%s: Failed to allocate sensor data buffer.",
-		      GetName());
+		ALOGE("%s: Failed to allocate sensor data buffer (fifo_len %d, scan_size %d).",
+		      GetName(), hw_fifo_len, (int)scan_size);
 		return;
 	}
 
@@ -759,16 +686,18 @@ void HWSensorBase::ThreadDataTask()
 					sensor_data.pollrate_ns = new_pollrate;
 					old_pollrate = new_pollrate;
 					odr_switch.removeLastElement();
-				} else
+				} else {
 					sensor_data.pollrate_ns = old_pollrate;
+				}
 
 				flush_handle = flush_stack.readLastElement(&timestamp_flush);
 				if ((flush_handle >= 0) &&
 				    (timestamp_flush <= sensor_data.timestamp)) {
 					sensor_data.flush_event_handle = flush_handle;
 					flush_stack.removeLastElement();
-				} else
+				} else {
 					sensor_data.flush_event_handle = -1;
+				}
 
 				ProcessData(&sensor_data);
 			}
@@ -874,9 +803,10 @@ HWSensorBaseWithPollrate::HWSensorBaseWithPollrate(HWSensorBaseCommonData *data,
 			HWSensorBase(data, name, handle, sensor_type, hw_fifo_len,
 				     power_consumption)
 {
-	unsigned int i, max_sampling_frequency = 0;
+	unsigned int i;
+	float max_sampling_frequency = 0.0f;
 #if (CONFIG_ST_HAL_ANDROID_VERSION > ST_HAL_KITKAT_VERSION)
-	unsigned int min_sampling_frequency = UINT_MAX;
+	float min_sampling_frequency = FLT_MAX;
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 	memcpy(&sampling_frequency_available, sfa,
@@ -901,7 +831,6 @@ HWSensorBaseWithPollrate::HWSensorBaseWithPollrate(HWSensorBaseCommonData *data,
 
 HWSensorBaseWithPollrate::~HWSensorBaseWithPollrate()
 {
-
 }
 
 int HWSensorBaseWithPollrate::SetDelay(int handle, int64_t period_ns,
@@ -991,7 +920,6 @@ int HWSensorBaseWithPollrate::SetDelay(int handle, int64_t period_ns,
 #endif /* CONFIG_ST_HAL_COMPENSATE_DELAY */
 		if (current_min_timeout != min_timeout_ns) {
 			buf_len = min_timeout_ns / FREQUENCY_TO_NS(sampling_frequency_available.freq[i]);
-
 			if (buf_len > sensor_t_data.fifoMaxEventCount)
 				buf_len = sensor_t_data.fifoMaxEventCount;
 
