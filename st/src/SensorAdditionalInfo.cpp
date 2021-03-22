@@ -10,12 +10,12 @@
 
 #include "SensorAdditionalInfo.h"
 
-#if CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION
-#if CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
+#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
 
 #include <stdlib.h>
 
-#if CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_OREO_VERSION
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_OREO_VERSION)
 #include <log/log.h>
 #else
 #include <cutils/log.h>
@@ -49,6 +49,16 @@ const additional_info_event_t* SensorAdditionalInfoEvent::getEndFrameEvent()
 		.serial = 0,
 	};
 	return &sensor_additional_info_endFrame;
+}
+
+const additional_info_event_t* SensorAdditionalInfoEvent::getDefaultSensorPlacementFrameEvent()
+{
+	static const additional_info_event_t sensor_additional_info_defaultSensorPlacementFrame = {
+		.type = AINFO_SENSOR_PLACEMENT,
+		.serial = 0,
+		.data_float = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0},
+	};
+	return &sensor_additional_info_defaultSensorPlacementFrame;
 }
 
 void SensorAdditionalInfoEvent::incrementEventSerial()

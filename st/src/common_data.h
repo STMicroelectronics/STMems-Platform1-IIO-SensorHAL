@@ -30,6 +30,8 @@
 #define ST_HAL_MARSHMALLOW_VERSION		(2)
 #define ST_HAL_NOUGAT_VERSION			(3)
 #define ST_HAL_OREO_VERSION			(4)
+#define ST_HAL_PIE_VERSION			(5)
+#define ST_HAL_10_VERSION			(6)
 
 #define CONCATENATE_STRING(x, y)		(x y)
 

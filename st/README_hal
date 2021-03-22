@@ -99,6 +99,7 @@ COMPILING THE SENSOR HAL FOR LINUX
 SENSORS SUPPORTED:
    - ST Test sensors		(Accel + Magn + Gyro);
    - ASM330LHH			(Accel + Gyro)
+   - ASM330LHHX			(Accel + Gyro)
 
 CHANGELOG:
    v3.0.0: First HAL revision
