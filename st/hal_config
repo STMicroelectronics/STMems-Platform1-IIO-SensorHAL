@@ -2,13 +2,14 @@
 # Automatically generated file; DO NOT EDIT.
 # SensorHAL IIO Configuration
 #
-CONFIG_ST_HAL_ANDROID_VERSION=4
+CONFIG_ST_HAL_ANDROID_VERSION=6
 
 #
 # Enable/disable sensors
 #
 CONFIG_ST_HAL_ACCEL_ENABLED=y
 CONFIG_ST_HAL_GYRO_ENABLED=y
+# CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED is not set
 
 #
 # Common configuration
@@ -25,6 +26,7 @@ CONFIG_ST_HAL_GYRO_RANGE=35
 #
 CONFIG_ST_HAL_TEST_SENSORS_ENABLED=y
 CONFIG_ST_HAL_ASM330LHH_ENABLED=y
+# CONFIG_ST_HAL_ASM330LHHX_ENABLED is not set
 
 #
 # Factory calibration & Self-Test

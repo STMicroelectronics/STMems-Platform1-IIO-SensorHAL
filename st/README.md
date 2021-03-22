@@ -18,7 +18,7 @@ Currently supported sensors are:
 
 ### Inertial Module Unit (IMU):
 
->    ASM330LHH
+>    ASM330LHH, ASM330LHHX
 
 Software architecture and Integration details
 =============
