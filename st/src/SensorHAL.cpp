@@ -84,6 +84,14 @@ static const struct ST_sensors_supported {
 				    "ASM330LHH Accelerometer Sensor",
 				    0.0f)
 #endif /* CONFIG_ST_HAL_ASM330LHH_ENABLED */
+#ifdef CONFIG_ST_HAL_ASM330LHHX_ENABLED
+	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_2,
+				    ACCEL_NAME_SUFFIX_IIO),
+				    SENSOR_TYPE_ACCELEROMETER,
+				    DEVICE_IIO_ACC,
+				    "ASM330LHHX Accelerometer Sensor",
+				    0.0f)
+#endif /* CONFIG_ST_HAL_ASM330LHHX_ENABLED */
 #endif /* CONFIG_ST_HAL_ACCEL_ENABLED */
 
 /**************** Gyroscope sensors ****************/
@@ -96,6 +104,14 @@ static const struct ST_sensors_supported {
 				    "ASM330LHH Gyroscope Sensor",
 				    0.0f)
 #endif /* CONFIG_ST_HAL_ASM330LHH_ENABLED */
+#ifdef CONFIG_ST_HAL_ASM330LHHX_ENABLED
+	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_2,
+				    GYRO_NAME_SUFFIX_IIO),
+				    SENSOR_TYPE_GYROSCOPE,
+				    DEVICE_IIO_GYRO,
+				    "ASM330LHHX Gyroscope Sensor",
+				    0.0f)
+#endif /* CONFIG_ST_HAL_ASM330LHHX_ENABLED */
 #endif /* CONFIG_ST_HAL_GYRO_ENABLED */
 };
 
@@ -607,7 +623,7 @@ static int st_hal_dev_batch(struct sensors_poll_device_1 *dev, int handle,
 	(void)flags;
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
-	ALOGD("changed timeout=%" PRIu64 "ms pollrate_ns=%" PRIu64 "ms",
+	ALOGD("changed timeout=%" PRIu64 "ns pollrate_ns=%" PRIu64 "ns",
 	      timeout,
 	      period_ns);
 

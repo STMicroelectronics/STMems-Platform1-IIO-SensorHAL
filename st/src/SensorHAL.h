@@ -34,6 +34,7 @@
  * IIO driver sensors names
  */
 #define ST_SENSORS_LIST_1			"asm330lhh"
+#define ST_SENSORS_LIST_2			"asm330lhhx"
 
 /*
  * IIO driver sensors suffix for sensors
