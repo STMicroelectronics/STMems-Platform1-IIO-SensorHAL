@@ -81,4 +81,3 @@ struct STSensorHAL_data {
 } typedef STSensorHAL_data;
 
 #endif /* ST_SENSOR_HAL_H */
-
