@@ -102,32 +102,25 @@ void Accelerometer::ProcessData(SensorBaseData *data)
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
 #if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
-size_t Accelerometer::getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames)
+int Accelerometer::getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames)
 {
-	additional_info_event_t XL_SAI_Placement_event, *p;
-	additional_info_event_t *p_custom_XL_SAI_Placement_event = NULL;
+	additional_info_event_t* p_custom_SAI_Placement_event = nullptr;
 
-	// place for ODM/OEM to fill custom_XL_SAI_Placement_event
+	// place for ODM/OEM to fill custom_SAI_Placement_event
+	// p_custom_SAI_Placement_event = &custom_SAI_Placement_event
 
-	if (!p_custom_XL_SAI_Placement_event) {
-		XL_SAI_Placement_event = defaultSensorPlacement_additional_info_event;
-		ALOGD("%s: using Sensor Additional Info Placement default", GetName());
-	} else {
-		XL_SAI_Placement_event = *p_custom_XL_SAI_Placement_event;
-	}
+/*  //Custom Placement example
+	additional_info_event_t custom_SAI_Placement_event;
+	custom_SAI_Placement_event = {
+		.type = AINFO_SENSOR_PLACEMENT,
+		.serial = 0,
+		.data_float = {-1, 0, 0, 1, 0, -1, 0, 2, 0, 0, -1, 3},
+	};
+	p_custom_SAI_Placement_event = &custom_SAI_Placement_event;
+*/
 
-	size_t frames = 1;
+	return UseCustomAINFOSensorPlacementPLFramesArray(array_sensorAdditionalInfoPLFrames, p_custom_SAI_Placement_event);
 
-	p = (additional_info_event_t *)calloc(frames , sizeof(additional_info_event_t));
-	if (!p) {
-		ALOGE("%s: Failed to allocate memory.", GetName());
-		return (size_t)-ENOMEM;
-	}
-	for (size_t i = 0; i < frames; i++)
-		memcpy(&p[i], &XL_SAI_Placement_event, sizeof(additional_info_event_t));
-
-	*array_sensorAdditionalInfoPLFrames = p;
-	return sizeof(**array_sensorAdditionalInfoPLFrames)/sizeof(*array_sensorAdditionalInfoPLFrames[0]);
 }
 #endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */

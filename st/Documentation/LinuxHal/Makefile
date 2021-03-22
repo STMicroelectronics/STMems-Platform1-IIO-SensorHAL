@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2018 STMicroelectronics
+# Copyright (C) 2021 STMicroelectronics
 # Motion MEMS Product Div.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 # limitations under the License.
 #/
 
+.PHONY: test_linux
 IDIR = -I. -I../../linux/
 
 CC=$(CROSS_COMPILE)gcc

@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics SensorBase Class
  *
- * Copyright 2015-2018 STMicroelectronics Inc.
+ * Copyright 2015-2020 STMicroelectronics Inc.
  * Author: Denis Ciocca - <denis.ciocca@st.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License").
@@ -103,6 +103,12 @@ SensorBase::SensorBase(const char *name, int handle, int type)
 	sensor_my_disable = 1;
 	decimator = 1;
 	samples_counter = 0;
+
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
+#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
+	supportsSensorAdditionalInfo = false;
+#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
+#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_MARSHMALLOW_VERSION)
 	injection_mode = SENSOR_INJECTION_NONE;
@@ -597,10 +603,90 @@ void SensorBase::WriteSensorAdditionalInfoFrameToPipe(additional_info_event_t *p
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_VERBOSE)
 	ALOGD("\"%s\": write additional sensor info event to pipe (sensor type: %d, additional info type: %d).", GetName(), GetType(), sens_info_singleframe.additional_info.type);
 #endif /* CONFIG_ST_HAL_DEBUG_LEVEL */
-	//TODO: check correctness of additional_info
 	err = write(write_pipe_fd, &sens_info_singleframe, sizeof(sensors_event_t));
 	if (err <= 0)
 		ALOGE("%s: Failed to write additional sensor info event data to pipe.", android_name);
+}
+
+void SensorBase::WriteSensorAdditionalInfoFrames(additional_info_event_t array_sensorAdditionalInfoDataFrames[], size_t frames_numb)
+{
+
+	for (size_t i = 0; i < frames_numb; ++i) {
+		ALOGV("%s : Before: item #: %zu of %zu",__func__, (i+1), frames_numb);
+		SensorBase::WriteSensorAdditionalInfoFrameToPipe(&array_sensorAdditionalInfoDataFrames[i]);
+		ALOGV("%s : Frame #:(%zu) of %zu sent.", __func__, (i=1),frames_numb);
+	}
+
+}
+
+
+void SensorBase::WriteSensorAdditionalInfoReport(additional_info_event_t array_sensorAdditionalInfoDataFrames[], size_t frames_numb)
+{
+	const additional_info_event_t *begin_additional_info = SensorAdditionalInfoEvent::getBeginFrameEvent();
+
+	const additional_info_event_t *end_additional_info = SensorAdditionalInfoEvent::getEndFrameEvent();
+
+	SensorBase::WriteSensorAdditionalInfoFrameToPipe(const_cast<additional_info_event_t*>(begin_additional_info));
+	WriteSensorAdditionalInfoFrames(array_sensorAdditionalInfoDataFrames, frames_numb);
+	SensorBase::WriteSensorAdditionalInfoFrameToPipe(const_cast<additional_info_event_t*>(end_additional_info));
+	ALOGD("%s : Sensor Additional Info Report sent.", __func__);
+
+}
+
+int SensorBase::getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames)
+{
+	int frames = 1;
+
+	*array_sensorAdditionalInfoPLFrames = (additional_info_event_t *)malloc((size_t)frames * sizeof(additional_info_event_t));
+	if (!*array_sensorAdditionalInfoPLFrames) {
+		ALOGE("%s: Failed to allocate memory.", GetName());
+		return -ENOMEM;
+	}
+
+	*array_sensorAdditionalInfoPLFrames[0] = *SensorAdditionalInfoEvent::getDefaultSensorPlacementFrameEvent();
+	ALOGD("%s: Using default SAINFO-SensorPlacement (sensor type: %d).", GetName(), GetType());
+	return frames;
+}
+
+void SensorBase::WriteSAIReportToPipe()
+{
+	additional_info_event_t *array_sensorAdditionalInfoPLFrames = nullptr;
+	int frames;
+	if (supportsSensorAdditionalInfo) {
+		frames = getSensorAdditionalInfoPayLoadFramesArray(&array_sensorAdditionalInfoPLFrames);
+		if (array_sensorAdditionalInfoPLFrames) {
+			ALOGD("%s:Sending SAINFO Report.", GetName());
+			if (frames > 0)
+				WriteSensorAdditionalInfoReport(array_sensorAdditionalInfoPLFrames, frames);
+			free(array_sensorAdditionalInfoPLFrames);
+		}
+	}
+}
+
+int SensorBase::UseCustomAINFOSensorPlacementPLFramesArray(
+		additional_info_event_t** array_sensorAdditionalInfoPLFrames,
+		additional_info_event_t* customAINFO_Placement_event)
+{
+	const int frames = 1;
+	additional_info_event_t SensorAI_Placement_event;
+
+	if (!customAINFO_Placement_event) {
+		SensorAI_Placement_event = *SensorAdditionalInfoEvent::getDefaultSensorPlacementFrameEvent();
+		ALOGD("%s: using Sensor Additional Info Placement default", GetName());
+	} else {
+		SensorAI_Placement_event = *customAINFO_Placement_event;
+		ALOGD("%s: using Sensor Additional Info Placement custom", GetName());
+	}
+
+	*array_sensorAdditionalInfoPLFrames = (additional_info_event_t *)calloc((size_t)frames , sizeof(additional_info_event_t));
+	if (!array_sensorAdditionalInfoPLFrames) {
+		ALOGE("%s: Failed to allocate memory.", GetName());
+		return -ENOMEM;
+	}
+	for (int i = 0; i < frames; i++)
+		memcpy(&((*array_sensorAdditionalInfoPLFrames)[i]), &SensorAI_Placement_event, sizeof(additional_info_event_t));
+
+	return frames;
 }
 #endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
@@ -640,6 +726,15 @@ void SensorBase::ProcessData(SensorBaseData *data)
 
 	for (i = 0; i < push_data.num; i++)
 		push_data.sb[i]->ReceiveDataFromDependency(sensor_t_data.handle, data);
+
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
+#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
+	if (data->flush_event_handle == sensor_t_data.handle) {
+		ALOGD("%s:SAINFO Report: FLUSH.", GetName());
+		WriteSAIReportToPipe();
+	}
+#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
+#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 }
 
 void SensorBase::ReceiveDataFromDependency(int handle, SensorBaseData *data)

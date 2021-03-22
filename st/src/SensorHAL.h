@@ -34,6 +34,7 @@
  * IIO driver sensors names
  */
 #define ST_SENSORS_LIST_1			"asm330lhh"
+#define ST_SENSORS_LIST_2			"asm330lhhx"
 
 /*
  * IIO driver sensors suffix for sensors
@@ -80,4 +81,3 @@ struct STSensorHAL_data {
 } typedef STSensorHAL_data;
 
 #endif /* ST_SENSOR_HAL_H */
-

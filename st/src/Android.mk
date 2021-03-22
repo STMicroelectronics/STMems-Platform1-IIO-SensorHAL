@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013-2018 STMicroelectronics
+# Copyright (C) 2013-2020 STMicroelectronics
 # Denis Ciocca - Motion MEMS Product Div.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,8 +65,6 @@ LOCAL_MODULE_OWNER := STMicroelectronics
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/ \
 			$(LOCAL_PATH)/../
 
-#			$(LOCAL_PATH)/../../../../hardware/libhardware/modules/sensors/dynamic_sensor/
-
 LOCAL_CFLAGS += -DLOG_TAG=\"SensorHAL\" -Wall \
 		-Wunused-parameter -Wunused-value -Wunused-function
 
@@ -78,13 +76,14 @@ endif # DEBUG
 
 LOCAL_SRC_FILES := \
 		SensorHAL.cpp \
+		utils.cpp \
 		CircularBuffer.cpp \
 		FlushBufferStack.cpp \
 		FlushRequested.cpp \
 		ChangeODRTimestampStack.cpp \
 		SensorBase.cpp \
 		HWSensorBase.cpp \
-		utils.cpp
+		SWSensorBase.cpp
 
 ifdef CONFIG_ST_HAL_ACCEL_ENABLED
 LOCAL_SRC_FILES += Accelerometer.cpp
@@ -94,9 +93,20 @@ ifdef CONFIG_ST_HAL_GYRO_ENABLED
 LOCAL_SRC_FILES += Gyroscope.cpp
 endif # CONFIG_ST_HAL_GYRO_ENABLED
 
+ifneq ($(or $(CONFIG_ST_HAL_GYRO_UNCALIB_AP_EMULATED),\
+	   $(CONFIG_ST_HAL_GYRO_UNCALIB_AP_ENABLED)),)
+LOCAL_SRC_FILES += SWGyroscopeUncalibrated.cpp
+endif # CONFIG_ST_HAL_GYRO_UNCALIB_AP_EMULATED
+
+ifneq ($(or $(CONFIG_ST_HAL_ACCEL_UNCALIB_AP_EMULATED),\
+	   $(CONFIG_ST_HAL_ACCEL_UNCALIB_AP_ENABLED)),)
+LOCAL_SRC_FILES += SWAccelerometerUncalibrated.cpp
+endif # CONFIG_ST_HAL_ACCEL_UNCALIB_AP_EMULATED
+
 ifdef CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED
 LOCAL_SRC_FILES += SensorAdditionalInfo.cpp
 endif # CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED
+
 
 LOCAL_MODULE_TAGS := optional
 
