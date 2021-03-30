@@ -14,15 +14,5 @@ under the License.
 
 -------------------------------------------------------------------------------
 
-This project may contains proprietary librares under lib/ folder. Different
-LICENSES are applied on binary files.
-
-  * LICENSE:
-    * PROPRIETARY - CUSTOM
-  * FILE:
-    * lib/*
-
-
-All other files are considered under Apache License version 2.0.
 Check LICENSE.txt to get information about the license.
 
