@@ -82,8 +82,7 @@ LOCAL_SRC_FILES := \
 		FlushRequested.cpp \
 		ChangeODRTimestampStack.cpp \
 		SensorBase.cpp \
-		HWSensorBase.cpp \
-		SWSensorBase.cpp
+		HWSensorBase.cpp
 
 ifdef CONFIG_ST_HAL_ACCEL_ENABLED
 LOCAL_SRC_FILES += Accelerometer.cpp
