@@ -214,7 +214,9 @@ int device_iio_utils::get_device_by_name(const char *name)
 				break;
 			}
 
-			if (strncmp(name, dname, strlen(dname)) == 0) {
+			if (strncmp(name, dname, strlen(dname)) == 0 &&
+			    /* check if asm330lhh and asm330lhhx */
+			    strlen(name) == strlen(dname)) {
 				fclose(devilceFile);
 				closedir(dp);
 				return number;
