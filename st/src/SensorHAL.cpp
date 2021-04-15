@@ -76,45 +76,33 @@ static const struct ST_sensors_supported {
 	device_iio_chan_type_t device_iio_sensor_type;
 	float power_consumption;
 } ST_sensors_supported[] = {
-/**************** Accelerometer sensors ****************/
-#ifdef CONFIG_ST_HAL_ACCEL_ENABLED
-#ifdef CONFIG_ST_HAL_ASM330LHH_ENABLED
+	/**************** Accelerometer sensors ****************/
 	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_1,
 				    ACCEL_NAME_SUFFIX_IIO),
 				    SENSOR_TYPE_ACCELEROMETER,
 				    DEVICE_IIO_ACC,
 				    "ASM330LHH Accelerometer Sensor",
 				    0.01f)
-#endif /* CONFIG_ST_HAL_ASM330LHH_ENABLED */
-#ifdef CONFIG_ST_HAL_ASM330LHHX_ENABLED
 	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_2,
 				    ACCEL_NAME_SUFFIX_IIO),
 				    SENSOR_TYPE_ACCELEROMETER,
 				    DEVICE_IIO_ACC,
 				    "ASM330LHHX Accelerometer Sensor",
 				    0.01f)
-#endif /* CONFIG_ST_HAL_ASM330LHHX_ENABLED */
-#endif /* CONFIG_ST_HAL_ACCEL_ENABLED */
 
-/**************** Gyroscope sensors ****************/
-#ifdef CONFIG_ST_HAL_GYRO_ENABLED
-#ifdef CONFIG_ST_HAL_ASM330LHH_ENABLED
+	/**************** Gyroscope sensors ****************/
 	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_1,
 				    GYRO_NAME_SUFFIX_IIO),
 				    SENSOR_TYPE_GYROSCOPE,
 				    DEVICE_IIO_GYRO,
 				    "ASM330LHH Gyroscope Sensor",
 				    0.01f)
-#endif /* CONFIG_ST_HAL_ASM330LHH_ENABLED */
-#ifdef CONFIG_ST_HAL_ASM330LHHX_ENABLED
 	ST_HAL_NEW_SENSOR_SUPPORTED(CONCATENATE_STRING(ST_SENSORS_LIST_2,
 				    GYRO_NAME_SUFFIX_IIO),
 				    SENSOR_TYPE_GYROSCOPE,
 				    DEVICE_IIO_GYRO,
 				    "ASM330LHHX Gyroscope Sensor",
 				    0.01f)
-#endif /* CONFIG_ST_HAL_ASM330LHHX_ENABLED */
-#endif /* CONFIG_ST_HAL_GYRO_ENABLED */
 };
 
 /*
@@ -908,7 +896,11 @@ static int st_hal_open_sensors(const struct hw_module_t *module,
 
 	device_found_num = st_hal_load_acc_data(&ST_sensors_supported[0],
 						&device_iio_devices_data[0]);
-	device_found_num += st_hal_load_gyro_data(&ST_sensors_supported[1],
+	device_found_num += st_hal_load_acc_data(&ST_sensors_supported[1],
+						&device_iio_devices_data[0]);
+	device_found_num += st_hal_load_gyro_data(&ST_sensors_supported[2],
+						  &device_iio_devices_data[1]);
+	device_found_num += st_hal_load_gyro_data(&ST_sensors_supported[3],
 						  &device_iio_devices_data[1]);
 	if (device_found_num <= 0) {
 		err = device_found_num;
