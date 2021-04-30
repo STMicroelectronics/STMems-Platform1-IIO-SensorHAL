@@ -15,6 +15,12 @@ config ST_HAL_GYRO_ENABLED
 	help
 	  Enable support for Gyroscope sensor.
 
+config ST_HAL_CONFIG_INOTIFY_ENABLED
+	bool "iNotify support"
+	default y
+	help
+	  Enable support for configuring HAL with iNotify.
+
 if (ST_HAL_ANDROID_VERSION != 1 && ST_HAL_ANDROID_VERSION != 2 && ST_HAL_ANDROID_VERSION != 3  && ST_HAL_ANDROID_VERSION != 4)
 config ST_HAL_ADDITIONAL_INFO_ENABLED
 	bool "Additional Info Sensor Support"

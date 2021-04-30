@@ -19,12 +19,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "iNotifyConfigMngmt.h"
 #include "SensorHAL.h"
 
 static const char *parsing_strings[] = {
 	"imu_sensor_placement = ",
+	"imu_sensor_euler_angles = ",
 };
 
 static volatile int run = 1;
@@ -43,46 +45,92 @@ static void sig_callback(int sig)
 
 static int show_sensor_placement(struct hal_config_t *config)
 {
-	ALOGD("Rotation Matrix: \t%5.2f %5.2f %5.2f %6.2f\n\t\t\t%5.2f %5.2f %5.2f %6.2f\n\t\t\t%5.2f %5.2f %5.2f %6.2f",
-		config->sensor_placement.x[0],
-		config->sensor_placement.x[1],
-		config->sensor_placement.x[2],
+	ALOGD("Rotation Matrix: \t%5.2f %5.2f %5.2f %6.2f\n\t\t\t%5.2f %5.2f %5.2f %6.2f\n\t\t\t%5.2f %5.2f %5.2f %6.2f\n",
+		config->sensor_placement.rot[0][0],
+		config->sensor_placement.rot[0][1],
+		config->sensor_placement.rot[0][2],
 		config->sensor_placement.location[0],
-		config->sensor_placement.y[0],
-		config->sensor_placement.y[1],
-		config->sensor_placement.y[2],
+		config->sensor_placement.rot[1][0],
+		config->sensor_placement.rot[1][1],
+		config->sensor_placement.rot[1][2],
 		config->sensor_placement.location[1],
-		config->sensor_placement.z[0],
-		config->sensor_placement.z[1],
-		config->sensor_placement.z[2],
+		config->sensor_placement.rot[2][0],
+		config->sensor_placement.rot[2][1],
+		config->sensor_placement.rot[2][2],
 		config->sensor_placement.location[2]);
 
 	return 0;
 }
 
-static int update_sensor_placement(struct hal_config_t *config,
-				   char *rotms, int len)
+static void init_hal_config(struct hal_config_t *config)
 {
-	if (len > 0) {
-		sscanf(rotms, "[%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f]",
-		       &config->sensor_placement.x[0],
-		       &config->sensor_placement.x[1],
-		       &config->sensor_placement.x[2],
-		       &config->sensor_placement.y[0],
-		       &config->sensor_placement.y[1],
-		       &config->sensor_placement.y[2],
-		       &config->sensor_placement.z[0],
-		       &config->sensor_placement.z[1],
-		       &config->sensor_placement.z[2],
-		       &config->sensor_placement.location[0],
-		       &config->sensor_placement.location[1],
-		       &config->sensor_placement.location[2]);
+	config->sensor_placement.rot[0][0] = 1;
+	config->sensor_placement.rot[0][1] = 0;
+	config->sensor_placement.rot[0][2] = 0;
+
+	config->sensor_placement.rot[1][0] = 0;
+	config->sensor_placement.rot[1][1] = 1;
+	config->sensor_placement.rot[1][2] = 0;
+
+	config->sensor_placement.rot[2][0] = 0;
+	config->sensor_placement.rot[2][1] = 0;
+	config->sensor_placement.rot[2][2] = 1;
+
+	config->sensor_placement.location[0] = 0;
+	config->sensor_placement.location[1] = 0;
+	config->sensor_placement.location[2] = 0;
+}
+
+static void update_rotation_matrix(struct hal_config_t *config, float yawd, float pitchd, float rolld)
+{
+	float yaw = (yawd / 10.0f) * M_PI / 180.0f;
+	float pitch = (pitchd / 10.0f) * M_PI / 180.0f;
+	float roll = (rolld / 10.0f) * M_PI / 180.0f;
+
+	config->sensor_placement.rot[0][0] = cos(yaw) * cos(roll) - sin(yaw) * sin(pitch) * sin(roll);
+	config->sensor_placement.rot[0][1] = -sin(yaw) * cos(pitch);
+	config->sensor_placement.rot[0][2] = cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll);
+
+	config->sensor_placement.rot[1][0] = sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll);
+	config->sensor_placement.rot[1][1] = cos(yaw) * cos(pitch);
+	config->sensor_placement.rot[1][2] = sin(yaw) * sin(roll) - cos(yaw) * sin(pitch) * cos(roll);
+
+	config->sensor_placement.rot[2][0] = -cos(pitch) * sin(roll);
+	config->sensor_placement.rot[2][1] = sin(pitch);
+	config->sensor_placement.rot[2][2] = cos(pitch) * cos(roll);
+}
+
+static int update_sensor_placement(struct hal_config_t *config,
+				   enum PARSING_STRING_INDEX index,
+				   char *data, int len)
+{
+	int roll = 0, pitch = 0, yaw = 0;
+	int x = 0, y = 0, z = 0;
+
+	switch (index) {
+	case IMU_SENSOR_PLACEMENT_INDEX:
+		sscanf(data, "[%d,%d,%d]", &x, &y, &z);
+
+		config->sensor_placement.location[0] = x;
+		config->sensor_placement.location[1] = y;
+		config->sensor_placement.location[2] = z;
+		break;
+	case IMU_SENSOR_EULER_ANGLES_INDEX:
+		sscanf(data, "[%d,%d,%d]",
+		       &roll,
+		       &pitch,
+		       &yaw);
+
+		update_rotation_matrix(config, yaw, pitch, roll);
+		break;
+	default:
+		return 0;
 	}
 
 	return 0;
 }
 
-static int update_file_data(const char *file, char *path, struct inotify_event *event)
+static int update_file_data(const char *file, char *path)
 {
 	char *file_path_name = NULL;
 	char *buffer_string = NULL;
@@ -93,16 +141,12 @@ static int update_file_data(const char *file, char *path, struct inotify_event *
 	char *ptr;
 	int size;
 
-	if (!event->name) {
-		return -EINVAL;
-	}
-
 	file_path_name = (char *)calloc(strlen(path) + strlen(file) + 2, 1);
 	if (!file_path_name) {
 		return -ENOMEM;
 	}
 
-	sprintf(file_path_name, "%s/%s", path, event->name);
+	sprintf(file_path_name, "%s/%s", path, file);
 	stat(file_path_name, &st);
 	size = st.st_size;
 	if (size == 0) {
@@ -130,13 +174,18 @@ static int update_file_data(const char *file, char *path, struct inotify_event *
 	}
 
 	ptr = strstr(buffer_string, parsing_strings[IMU_SENSOR_PLACEMENT_INDEX]);
-	if (!ptr) {
-		goto err_out;
+	if (ptr) {
+		ptr += strlen(parsing_strings[IMU_SENSOR_PLACEMENT_INDEX]);
+
+		update_sensor_placement(&hal_config, IMU_SENSOR_PLACEMENT_INDEX, ptr, ptr - buffer_string);
 	}
 
-	ptr += strlen(parsing_strings[IMU_SENSOR_PLACEMENT_INDEX]);
+	ptr = strstr(buffer_string, parsing_strings[IMU_SENSOR_EULER_ANGLES_INDEX]);
+	if (ptr) {
+		ptr += strlen(parsing_strings[IMU_SENSOR_EULER_ANGLES_INDEX]);
 
-	update_sensor_placement(&hal_config, ptr, ptr - buffer_string);
+		update_sensor_placement(&hal_config, IMU_SENSOR_EULER_ANGLES_INDEX, ptr, ptr - buffer_string);
+	}
 
 err_out:
 	if (fd_config) {
@@ -173,7 +222,6 @@ static void *hal_configuration_thread(void *parm)
 	fd = inotify_init();
 	if (fd < 0) {
 		ALOGE("inotify_init");
-
 		return NULL;
 	}
 
@@ -186,9 +234,14 @@ static void *hal_configuration_thread(void *parm)
 	thread_params = (struct thread_params_t *)parm;
 	if (!thread_params->pathname ||
 	    !is_directory(thread_params->pathname)) {
-		ALOGE("pathname is not a valid directory");
+		ALOGE("pathname is not a valid directory %s\n", thread_params->pathname);
 		exit(-1);
 	}
+
+	init_hal_config(&hal_config);
+
+	update_file_data(HAL_CONFIGURATION_FILE, thread_params->pathname);
+	show_sensor_placement(&hal_config);
 
 	wd = inotify_add_watch(fd, thread_params->pathname, IN_CLOSE);
 	if (wd < 0) {
@@ -223,7 +276,7 @@ static void *hal_configuration_thread(void *parm)
 					if (event->mask & IN_CLOSE_WRITE) {
 						ALOGD("Configuration file %s closed for write", event->name);
 						if (strcmp(event->name, HAL_CONFIGURATION_FILE) == 0) {
-							update_file_data(HAL_CONFIGURATION_FILE, thread_params->pathname, event);
+							update_file_data(HAL_CONFIGURATION_FILE, thread_params->pathname);
 							show_sensor_placement(&hal_config);
 						}
 					}
@@ -252,8 +305,8 @@ static void *hal_configuration_thread(void *parm)
 
 int init_notify_loop(char *pathname)
 {
-	struct thread_params_t thread_params;
-	struct sigaction sa;
+	static struct thread_params_t thread_params;
+	static struct sigaction sa;
 	pthread_t threadid;
 	int status;
 
@@ -284,4 +337,9 @@ int init_notify_loop(char *pathname)
 	}
 
 	return 0;
+}
+
+struct hal_config_t* get_sensor_placement(void)
+{
+	return &hal_config;
 }

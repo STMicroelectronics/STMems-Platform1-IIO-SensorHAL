@@ -1210,6 +1210,7 @@ rollback_operation_mode:
 }
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
+#if CONFIG_ST_HAL_CONFIG_INOTIFY_ENABLED
 __attribute__((constructor)) void init(void)
 {
 	init_notify_loop(HAL_CONFIGURATION_PATH);
@@ -1219,3 +1220,4 @@ __attribute__((destructor)) void fini(void)
 {
 
 }
+#endif /* CONFIG_ST_HAL_CONFIG_INOTIFY_ENABLED */
