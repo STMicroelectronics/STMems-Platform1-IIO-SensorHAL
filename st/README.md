@@ -14,6 +14,8 @@ The STM Android sensor Hardware Abstraction Layer (*HAL*) defines a standard int
 
 STM Sensor HAL is leaning on [Linux IIO framework](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/iio) to gather data from sensor device drivers and to forward samples to the Android Framework
 
+Current version of SensorHAL introduce also iNotify events to manage rotation angle matrix and sensor placement configuration. The notification takes place by writing the shared file /etc/sensorhal/hal_config
+
 Currently supported sensors are:
 
 ### Inertial Module Unit (IMU):

@@ -70,8 +70,10 @@
 
 /* Overrite default log utility */
 #ifdef PLTF_LINUX_ENABLED
-#define ALOGD(fmt, ...) printf((fmt), ##__VA_ARGS__)
-#define ALOGE(fmt, ...) printf((fmt), ##__VA_ARGS__)
+#define ALOGV(fmt, ...) fprintf(stdout, "[VERBOSE] %s(%u): " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define ALOGD(fmt, ...) fprintf(stdout, "[DEBUG] %s(%u): " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define ALOGW(fmt, ...) fprintf(stdout, "[WARNING] %s(%u): " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
+#define ALOGE(fmt,...)  fprintf(stderr, "[ERROR] %s(%u): " fmt "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #endif
 
 #endif /* ANDROID_SENSOR_HAL_COMMON_DATA */
