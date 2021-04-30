@@ -250,6 +250,7 @@ public:
 	virtual int GetLatestValidDataFromDependency(int dependency_id,
 						     SensorBaseData *data,
 						     int64_t timesync);
+	static void applyRotationMatrix(SensorBaseData& data);
 
 	static void *ThreadDataWork(void *context);
 	virtual void ThreadDataTask();
