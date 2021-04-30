@@ -69,6 +69,8 @@ void Accelerometer::ProcessData(SensorBaseData *data)
 				     tmp_raw_data[2],
 				     CONFIG_ST_HAL_ACCEL_ROT_MATRIX);
 
+	applyRotationMatrix(*data);
+
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_EXTRA_VERBOSE)
 	ALOGD("\"%s\": received new sensor data: x=%f y=%f z=%f, timestamp=%" PRIu64 "ns, deltatime=%" PRIu64 "ns (sensor type: %d).",
 	      sensor_t_data.name, data->raw[0], data->raw[1], data->raw[2],
