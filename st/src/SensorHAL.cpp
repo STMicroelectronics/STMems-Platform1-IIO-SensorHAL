@@ -25,6 +25,7 @@
 #include "Gyroscope.h"
 #include "SWGyroscopeUncalibrated.h"
 #include "SWAccelerometerUncalibrated.h"
+#include "iNotifyConfigMngmt.h"
 
 /*
  * STSensorHAL_device_iio_devices_data: informations related to the IIO devices,
@@ -1208,3 +1209,13 @@ rollback_operation_mode:
 	return -EINVAL;
 }
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
+
+__attribute__((constructor)) void init(void)
+{
+	init_notify_loop(HAL_CONFIGURATION_PATH);
+}
+
+__attribute__((destructor)) void fini(void)
+{
+
+}
