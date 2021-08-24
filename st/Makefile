@@ -47,7 +47,8 @@ LOCAL_SRC_FILES := \
 		src/HWSensorBase.cpp \
 		src/Accelerometer.cpp \
 		src/Gyroscope.cpp \
-		src/utils.cpp
+		src/utils.cpp \
+		src/iNotifyConfigMngmt.cpp
 
 OBJS=$(subst .cpp,.o,$(LOCAL_SRC_FILES))
 
