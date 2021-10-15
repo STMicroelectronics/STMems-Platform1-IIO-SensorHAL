@@ -21,7 +21,7 @@ IDIR = -I. -I../../linux/
 CC=$(CROSS_COMPILE)gcc
 LD=$(CROSS_COMPILE)gcc
 CFLAGS=$(IDIR) -DLOG_TAG=\"test_linux\"
-LIB=-ldl -lpthread
+LIB=-ldl -lpthread -lm
 
 .PHONY: test_linux
 
