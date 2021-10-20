@@ -50,6 +50,52 @@ int Accelerometer::Enable(int handle, bool enable, bool lock_en_mutex)
 	return HWSensorBaseWithPollrate::Enable(handle, enable, lock_en_mutex);
 }
 
+void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
+{
+	static int8_t isStatic = 0;
+ 
+	switch (fsmNextState) {
+	case RESET:
+		isStatic = 0;
+		stFSMInit(&state);
+		fsmNextState = INITIALIZED;
+		break;
+	case INITIALIZED:
+		// move to running when ignition is off
+		// TODO waiting for a command ignition off, then move to running state
+		break;
+	case RUNNING:
+		float acc[3], gVec[3];
+
+		acc[0] = data.raw[0] / GRAVITY_EARTH;
+		acc[1] = data.raw[1] / GRAVITY_EARTH;
+		acc[2] = data.raw[2] / GRAVITY_EARTH;
+
+		if (isStatic == 0){
+			isStatic =  computeGravityVector(&state, acc, data.timestamp / 1e6, gVec);
+			if (isStatic) {
+				int16_t nLoop;
+				uint16_t thresh[3][2];
+				uint8_t thresh_hex[3][4];
+
+				computeThreshold(gVec,thresh);
+
+				for (nLoop = 0; nLoop < 3; nLoop++) {
+					thresh_hex[nLoop][0] = (uint8_t)(thresh[0][0] & 0x00FF);
+					thresh_hex[nLoop][1] = (uint8_t)(thresh[0][0] >> 8);
+					thresh_hex[nLoop][2] = (uint8_t)(thresh[0][1] & 0x00FF);
+					thresh_hex[nLoop][3] = (uint8_t)(thresh[0][1] >> 8);
+				}
+
+				// TODO store thresholds into sensors fsm registers
+			}
+		}
+		break;
+	default:
+		return;
+	}
+}
+
 void Accelerometer::ProcessData(SensorBaseData *data)
 {
 	float tmp_raw_data[SENSOR_DATA_3AXIS];
@@ -68,6 +114,8 @@ void Accelerometer::ProcessData(SensorBaseData *data)
 				     tmp_raw_data[1],
 				     tmp_raw_data[2],
 				     CONFIG_ST_HAL_ACCEL_ROT_MATRIX);
+
+	calculateThresholdMLC(*data);
 
 	applyRotationMatrix(*data);
 

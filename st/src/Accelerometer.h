@@ -19,6 +19,7 @@
 #define ST_ACCELEROMETER_SENSOR_H
 
 #include "HWSensorBase.h"
+#include "mlc-helper.h"
 
 /*
  * class Accelerometer
@@ -30,6 +31,9 @@ private:
 	int getSensorAdditionalInfoPayLoadFramesArray(additional_info_event_t **array_sensorAdditionalInfoPLFrames);
 #endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
+	stFSMSensor state;
+	enum stFSMState fsmNextState = RESET;
+
 public:
 	Accelerometer(HWSensorBaseCommonData *data, const char *name,
 		      struct device_iio_sampling_freqs *sfa, int handle,
@@ -38,6 +42,7 @@ public:
 	~Accelerometer();
 
 	virtual int Enable(int handle, bool enable, bool lock_en_mutex);
+	void calculateThresholdMLC(SensorBaseData &data);
 	virtual void ProcessData(SensorBaseData *data);
 };
 
