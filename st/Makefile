@@ -48,7 +48,8 @@ LOCAL_SRC_FILES := \
 		src/Accelerometer.cpp \
 		src/Gyroscope.cpp \
 		src/utils.cpp \
-		src/iNotifyConfigMngmt.cpp
+		src/iNotifyConfigMngmt.cpp \
+		src/mlc-helper.cpp
 
 OBJS=$(subst .cpp,.o,$(LOCAL_SRC_FILES))
 
