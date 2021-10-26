@@ -730,6 +730,13 @@ void HWSensorBase::ThreadEventsTask()
 	}
 }
 
+#ifdef PLTF_LINUX_ENABLED
+int HWSensorBase::Ignition(int status)
+{
+	return 0;
+}
+#endif /* PLTF_LINUX_ENABLED */
+
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_MARSHMALLOW_VERSION)
 int HWSensorBase::InjectionMode(bool enable)
 {
