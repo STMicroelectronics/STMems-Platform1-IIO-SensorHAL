@@ -350,7 +350,7 @@ int HWSensorBase::WriteBufferLenght(unsigned int buf_len)
 	return 0;
 }
 
-int64_t elapsedRealtimeNano()
+static int64_t elapsedRealtimeNano()
 {
 #ifdef PLTF_LINUX_ENABLED
     struct timespec ts;
