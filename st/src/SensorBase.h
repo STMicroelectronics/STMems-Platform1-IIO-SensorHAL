@@ -263,6 +263,11 @@ public:
 	virtual int InjectSensorData(const sensors_event_t *data);
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
+#ifdef PLTF_LINUX_ENABLED
+	/* set engine ignition status (on/off) */
+	virtual int Ignition(int val);
+#endif /* PLTF_LINUX_ENABLED */
+
 	virtual bool hasEventChannels();
 	virtual bool hasDataChannels();
 };

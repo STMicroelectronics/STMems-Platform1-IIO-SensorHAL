@@ -98,6 +98,11 @@ public:
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 	bool hasEventChannels() { return has_event_channels; }
 	bool hasDataChannels() { return common_data.num_channels > 0; }
+
+#ifdef PLTF_LINUX_ENABLED
+	/* set engine ignition status (on/off) */
+	virtual int Ignition(int val);
+#endif /* PLTF_LINUX_ENABLED */
 };
 
 

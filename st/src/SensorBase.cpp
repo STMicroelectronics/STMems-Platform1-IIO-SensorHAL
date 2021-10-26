@@ -20,6 +20,8 @@
 #include "SensorBase.h"
 #include "iNotifyConfigMngmt.h"
 
+#if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_PIE_VERSION)
+#if (CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED)
 static int64_t elapsedRealtimeNano()
 {
 #ifdef PLTF_LINUX_ENABLED
@@ -34,6 +36,8 @@ static int64_t elapsedRealtimeNano()
     return android::elapsedRealtimeNano();
 #endif
 }
+#endif /* CONFIG_ST_HAL_ADDITIONAL_INFO_ENABLED */
+#endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION == ST_HAL_KITKAT_VERSION)
 void atomic_init(atomic_short *atom, int num)
@@ -876,6 +880,14 @@ void SensorBase::ThreadEventsTask()
 {
 	pthread_exit(NULL);
 }
+
+#ifdef PLTF_LINUX_ENABLED
+	/* set engine ignition status (on/off) */
+int SensorBase::Ignition(int val)
+{
+	return 0;
+}
+#endif /* PLTF_LINUX_ENABLED */
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_MARSHMALLOW_VERSION)
 int SensorBase::InjectionMode(bool __attribute__((unused))enable)
