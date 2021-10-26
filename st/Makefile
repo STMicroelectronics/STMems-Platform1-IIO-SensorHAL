@@ -26,7 +26,7 @@ CFLAGS += $(INCLUDES) -DLOG_TAG=\"SensorHAL\" -DPLTF_LINUX_ENABLED -Wall \
 		-Wunused-parameter -Wunused-value -Wunused-function -Wunused-label -fPIC
 
 CPPFLAGS = $(INCLUDES) -g -DPLTF_LINUX_ENABLED -Wunused-label -Wall -fPIC \
-		-D_DEFAULT_SOURCE
+		-D_DEFAULT_SOURCE -std=c++11
 LDFLAGS = -g -L$(OUT)
 LDLIBS = -lpthread
 
