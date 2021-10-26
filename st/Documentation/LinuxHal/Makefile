@@ -20,7 +20,7 @@ IDIR = -I. -I../../linux/
 
 CC=$(CROSS_COMPILE)gcc
 LD=$(CROSS_COMPILE)gcc
-CFLAGS=$(IDIR) -DLOG_TAG=\"test_linux\"
+CFLAGS=$(IDIR) -DLOG_TAG=\"test_linux\" -DPLTF_LINUX_ENABLED
 LIB=-ldl -lpthread -lm
 
 .PHONY: test_linux
