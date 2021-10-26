@@ -140,6 +140,10 @@ struct st_hal_private_data {
 static int st_hal_set_operation_mode(unsigned int mode);
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
 
+#ifdef PLTF_LINUX_ENABLED
+static int st_ignition_on_off(int val);
+#endif /* PLTF_LINUX_ENABLED */
+
 /*
  * st_hal_create_virtual_class_sensor - Istance virtual sensor class
  * @sensor_type: Android sensor type.
@@ -1163,7 +1167,24 @@ struct sensors_module_t HAL_MODULE_INFO_SYM = {
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_MARSHMALLOW_VERSION)
 	.set_operation_mode = st_hal_set_operation_mode,
 #endif /* CONFIG_ST_HAL_ANDROID_VERSION */
+#ifdef PLTF_LINUX_ENABLED
+	.ignition_on_off = st_ignition_on_off,
+#endif /* PLTF_LINUX_ENABLED */
 };
+
+#ifdef PLTF_LINUX_ENABLED
+/**
+ * command ignition
+ */
+static int st_ignition_on_off(int val)
+{
+	STSensorHAL_data *hal_data =
+		(STSensorHAL_data *)HAL_MODULE_INFO_SYM.common.dso;
+
+
+	return hal_data->sensor_classes[hal_data->sensor_t_list[0].handle]->Ignition(val);
+}
+#endif /* PLTF_LINUX_ENABLED */
 
 #if (CONFIG_ST_HAL_ANDROID_VERSION >= ST_HAL_MARSHMALLOW_VERSION)
 /**

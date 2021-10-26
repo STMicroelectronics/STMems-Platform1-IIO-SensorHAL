@@ -44,6 +44,10 @@ public:
 	virtual int Enable(int handle, bool enable, bool lock_en_mutex);
 	void calculateThresholdMLC(SensorBaseData &data);
 	virtual void ProcessData(SensorBaseData *data);
+#ifdef PLTF_LINUX_ENABLED
+	/* set engine ignition status (on/off) */
+	virtual int Ignition(int val);
+#endif /* PLTF_LINUX_ENABLED */
 };
 
 #endif /* ST_ACCELEROMETER_SENSOR_H */

@@ -31,6 +31,8 @@ static const char *device_iio_buffer_length = "buffer/length";
 static const char *device_iio_device_name = "iio:device";
 static const char *device_iio_injection_mode_enable = "injection_mode";
 static const char *device_iio_injection_sensors_filename = "injection_sensors";
+static const char *device_iio_fsm_threshold_filename = "fsm_threshold";
+static const char *device_iio_mlc_device_name = "mlc";
 
 int device_iio_utils::sysfs_write_int(char *file, int val)
 {
@@ -151,7 +153,8 @@ int device_iio_utils::enable_channels(const char *device_dir, bool enable)
 
 		if (!strcmp(ent->d_name + strlen(ent->d_name) - strlen("_en"),
 			    "_en")) {
-			sprintf(filename, "%s/%s", dir, ent->d_name);
+			snprintf(filename, DEVICE_IIO_MAX_FILENAME_LEN,
+					 "%s/%s", dir, ent->d_name);
 			sysfsfp = fopen(filename, "r+");
 			if (!sysfsfp) {
 				closedir(dp);
@@ -454,7 +457,8 @@ int device_iio_utils::get_type(struct device_iio_info_channel *channel,
 	while (ent = readdir(dp), ent != NULL) {
 		if ((strcmp(type_name, ent->d_name) == 0) ||
 		    (strcmp(name_post, ent->d_name) == 0)) {
-			sprintf(filename, "%s/%s", dir, ent->d_name);
+			snprintf(filename, DEVICE_IIO_MAX_FILENAME_LEN,
+					 "%s/%s", dir, ent->d_name);
 			sysfsfp = fopen(filename, "r");
 			if (sysfsfp == NULL)
 				continue;
@@ -592,8 +596,6 @@ int device_iio_utils::set_injection_mode(const char *device_dir, bool enable)
 		       "%s/%s",
 		       device_dir,
 		       device_iio_injection_mode_enable);
-	if (ret < 0)
-		return -ENOMEM;
 
 	return ret < 0 ? -ENOMEM : sysfs_write_int(tmp_filaname, enable);
 }
@@ -633,4 +635,26 @@ int device_iio_utils::inject_data(const char *device_dir, unsigned char *data,
 	fclose(sysfsfp);
 
 	return ret;
+}
+
+int device_iio_utils::update_fsm_thresholds(char *threshold_data)
+{
+	char fsm_thresholds_filename[DEVICE_IIO_MAX_FILENAME_LEN];
+	int ret, number;
+
+	ret = get_device_by_name(device_iio_mlc_device_name);
+	if (ret < 0)
+		return ret;
+
+	number = ret;
+	ret = snprintf(fsm_thresholds_filename,
+				   DEVICE_IIO_MAX_FILENAME_LEN,
+				   "%s%s%d/%s",
+				   device_iio_dir,
+				   device_iio_device_name,
+				   number,
+				   device_iio_fsm_threshold_filename);
+
+	return ret < 0 ? -ENOMEM : sysfs_write_str(fsm_thresholds_filename,
+                                               threshold_data);
 }
