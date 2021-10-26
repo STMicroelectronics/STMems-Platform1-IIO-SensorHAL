@@ -20,6 +20,21 @@
 #include "SensorBase.h"
 #include "iNotifyConfigMngmt.h"
 
+static int64_t elapsedRealtimeNano()
+{
+#ifdef PLTF_LINUX_ENABLED
+    struct timespec ts;
+    int err = clock_gettime(CLOCK_BOOTTIME, &ts);
+    if (err) {
+        ALOGE("clock_gettime(CLOCK_BOOTTIME) failed: %s", strerror(errno));
+        return 0;
+    }
+    return (ts.tv_sec * 1000000000) + ts.tv_nsec;
+#else
+    return android::elapsedRealtimeNano();
+#endif
+}
+
 #if (CONFIG_ST_HAL_ANDROID_VERSION == ST_HAL_KITKAT_VERSION)
 void atomic_init(atomic_short *atom, int num)
 {
@@ -599,7 +614,7 @@ void SensorBase::WriteSensorAdditionalInfoFrameToPipe(additional_info_event_t *p
 	sens_info_singleframe.sensor = sensor_event.sensor;
 	sens_info_singleframe.type = SENSOR_TYPE_ADDITIONAL_INFO;
 	sens_info_singleframe.additional_info = *p_sensor_additional_info_event;
-	sens_info_singleframe.timestamp = android::elapsedRealtimeNano();
+	sens_info_singleframe.timestamp = elapsedRealtimeNano();
 
 #if (CONFIG_ST_HAL_DEBUG_LEVEL >= ST_HAL_DEBUG_VERBOSE)
 	ALOGD("\"%s\": write additional sensor info event to pipe (sensor type: %d, additional info type: %d).", GetName(), GetType(), sens_info_singleframe.additional_info.type);
