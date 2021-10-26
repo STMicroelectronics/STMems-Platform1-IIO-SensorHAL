@@ -412,6 +412,14 @@ struct sensors_module_t {
      *         -EPERM if operation is not allowed
      */
     int (*set_operation_mode)(unsigned int mode);
+
+#ifdef PLTF_LINUX_ENABLED
+    /**
+     * command ignition
+     */
+    int (*ignition_on_off)(int val);
+
+#endif /* PLTF_LINUX_ENABLED */
 };
 
 struct sensor_t {

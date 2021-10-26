@@ -13,6 +13,8 @@
 
 #include "Accelerometer.h"
 
+static int toggle_ignition;
+
 Accelerometer::Accelerometer(HWSensorBaseCommonData *data, const char *name,
 		struct device_iio_sampling_freqs *sfa, int handle,
 		unsigned int hw_fifo_len, float power_consumption, bool wakeup) :
@@ -45,6 +47,16 @@ Accelerometer::~Accelerometer()
 
 }
 
+#ifdef PLTF_LINUX_ENABLED
+int Accelerometer::Ignition(int status)
+{
+	ALOGD("\"%s\": Ignition mode %d", sensor_t_data.name, status);
+	toggle_ignition = status;
+
+	return 0;
+}
+#endif /* PLTF_LINUX_ENABLED */
+
 int Accelerometer::Enable(int handle, bool enable, bool lock_en_mutex)
 {
 	return HWSensorBaseWithPollrate::Enable(handle, enable, lock_en_mutex);
@@ -62,7 +74,11 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 		break;
 	case INITIALIZED:
 		// move to running when ignition is off
-		// TODO waiting for a command ignition off, then move to running state
+		// waiting for a command ignition off, then move to running state
+		if (toggle_ignition) {
+			toggle_ignition = 0;
+			fsmNextState = RUNNING;
+		}
 		break;
 	case RUNNING:
 		float acc[3], gVec[3];
@@ -74,9 +90,11 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 		if (isStatic == 0){
 			isStatic =  computeGravityVector(&state, acc, data.timestamp / 1e6, gVec);
 			if (isStatic) {
+				int ret;
 				int16_t nLoop;
 				uint16_t thresh[3][2];
 				uint8_t thresh_hex[3][4];
+				char fsm_th_str[sizeof(thresh_hex) * strlen("00,")];
 
 				computeThreshold(gVec,thresh);
 
@@ -87,7 +105,29 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 					thresh_hex[nLoop][3] = (uint8_t)(thresh[0][1] >> 8);
 				}
 
-				// TODO store thresholds into sensors fsm registers
+				// store thresholds into sensors fsm registers
+				ret = sprintf(fsm_th_str,
+							   "%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x",
+							   thresh_hex[0][1], thresh_hex[0][0],
+							   thresh_hex[0][3], thresh_hex[0][2],
+							   thresh_hex[1][1], thresh_hex[1][0],
+							   thresh_hex[1][3], thresh_hex[1][2],
+							   thresh_hex[2][1], thresh_hex[2][0],
+							   thresh_hex[2][3], thresh_hex[2][2]);
+				if (ret < 0) {
+					ALOGE("\"%s\": Failed to allocate FSM threshold",
+						  sensor_t_data.name);
+
+					return;
+				}
+
+				ret = device_iio_utils::update_fsm_thresholds(fsm_th_str);
+				if (ret < 0) {
+					ALOGE("\"%s\": Failed to update FSM threshold",
+						  sensor_t_data.name);
+
+					return;
+				}
 			}
 		}
 		break;
