@@ -114,6 +114,7 @@ class device_iio_utils {
 		static int set_injection_mode(const char *device_dir, bool enable);
 		static int inject_data(const char *device_dir, unsigned char *data,
 				       int len, device_iio_chan_type_t device_type);
+		static int update_fsm_thresholds(char *data);
 };
 
 #endif /* __DEVICE_IIO_UTILS */
