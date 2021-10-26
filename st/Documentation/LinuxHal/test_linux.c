@@ -150,6 +150,7 @@ static const struct option long_options[] = {
 		{"accpm",     required_argument, 0,  'p' },
 		{"rotmat",    required_argument, 0,  'r' },
 		{"position",  required_argument, 0,  'z' },
+		{"ign_cmd",   required_argument, 0,  'I' },
 		{"help",      no_argument,       0,  '?' },
 		{0,           0,                 0,   0  }
 	};
@@ -583,6 +584,8 @@ static void help(char *argv)
 	printf("\t--%s:\tUpdate HAL rotation matrix (\"yaw,pitch,roll\")\n",
 	       long_options[index++].name);
 	printf("\t--%s:\tUpdate HAL sensor position (\"x,y,z\")\n",
+	       long_options[index++].name);
+	printf("\t--%s:\tRun Ignition command on SensorHAL (data 0/1)\n",
 	       long_options[index++].name);
 	printf("\t--%s:\t\tThis help\n", long_options[index++].name);
 
@@ -1163,6 +1166,8 @@ int main(int argc, char **argv)
 	int set_pm = 0;
 	int find_mlc = 0;
 	int info_mlc = 0;
+	int ign_flag = 0;
+	int ign_data = 0;
 	char *rm_value = NULL;
 	char *sp_value = NULL;
 
@@ -1245,6 +1250,10 @@ int main(int argc, char **argv)
 			break;
 		case 'z':
 			sp_value = optarg;
+			break;
+		case 'I':
+			ign_flag = 1;
+			ign_data = atoi(optarg);
 			break;
 		case 'v':
 			printf("Version %s\n", TEST_LINUX_VERSION);
@@ -1373,6 +1382,9 @@ int main(int argc, char **argv)
 		update_hal_sensor_placement(HAL_CONFIGURATION_PATH,
 					    HAL_CONFIGURATION_FILE,
 					    sp_value);
+
+	if (ign_flag)
+		hmi->ignition_on_off(ign_data);
 
 	if (sensor_handle >= 0)
 		single_sensor_test(sensor_handle);
