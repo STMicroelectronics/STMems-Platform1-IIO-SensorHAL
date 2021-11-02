@@ -88,7 +88,7 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 		acc[2] = data.raw[2] / GRAVITY_EARTH;
 
 		if (isStatic == 0){
-			isStatic =  computeGravityVector(&state, acc, data.timestamp / 1e6, gVec);
+			isStatic =  computeGravityVector(&state, acc, data.timestamp, gVec);
 			if (isStatic) {
 				int ret;
 				int16_t nLoop;
