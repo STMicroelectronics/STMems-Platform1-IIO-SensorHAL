@@ -90,6 +90,7 @@ class device_iio_utils {
 
 	public:
 		static int get_device_by_name(const char *name);
+		static int get_device_by_type(const char *type);
 		static int enable_sensor(char *device_dir, bool enable);
 		static int get_sampling_frequency_available(char *device_dir,
 				struct device_iio_sampling_freqs *sfa);
