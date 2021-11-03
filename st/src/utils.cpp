@@ -32,7 +32,7 @@ static const char *device_iio_device_name = "iio:device";
 static const char *device_iio_injection_mode_enable = "injection_mode";
 static const char *device_iio_injection_sensors_filename = "injection_sensors";
 static const char *device_iio_fsm_threshold_filename = "fsm_threshold";
-static const char *device_iio_mlc_device_name = "mlc";
+static const char *device_iio_mlc_device_type = "mlc";
 
 int device_iio_utils::sysfs_write_int(char *file, int val)
 {
@@ -80,9 +80,13 @@ int device_iio_utils::sysfs_write_str(char *file, char *str)
 {
 	FILE *fp;
 
+ALOGD("sysfs_write_str: write to file ret %s data %s", file, str);
+
 	fp = fopen(file, "w");
 	if (NULL == fp)
 		return -errno;
+
+ALOGD("sysfs_write_str: 111 write to file ret %s data %s", file, str);
 
 	fprintf(fp, "%s", str);
 	fclose(fp);
@@ -214,14 +218,80 @@ int device_iio_utils::get_device_by_name(const char *name)
 			ret = fscanf(devilceFile, "%s", dname);
 			if (ret <= 0) {
 				fclose(devilceFile);
+
 				break;
 			}
 
 			if (strncmp(name, dname, strlen(dname)) == 0 &&
-			    /* check if asm330lhh and asm330lhhx */
 			    strlen(name) == strlen(dname)) {
 				fclose(devilceFile);
 				closedir(dp);
+
+				return number;
+			}
+
+		fclose(devilceFile);
+		}
+	}
+
+	closedir(dp);
+
+	return -ENODEV;
+}
+
+int device_iio_utils::get_device_by_type(const char *type)
+{
+	struct dirent *ent;
+	int number, numstrlen;
+	FILE *devilceFile;
+	DIR *dp;
+	char dname[DEVICE_IIO_MAX_NAME_LENGTH];
+	char dfilename[DEVICE_IIO_MAX_FILENAME_LEN + 1];
+	int ret;
+	int fnamelen;
+
+	dp = opendir(device_iio_dir);
+	if (NULL == dp)
+		return -ENODEV;
+
+	for (ent = readdir(dp); ent; ent = readdir(dp)) {
+		if (strlen(ent->d_name) <= strlen(device_iio_device_name) ||
+		    !strcmp(ent->d_name, ".") ||
+		    !strcmp(ent->d_name, ".."))
+			continue;
+
+		if (strncmp(ent->d_name, device_iio_device_name,
+			    strlen(device_iio_device_name)) == 0) {
+			numstrlen = sscanf(ent->d_name +
+					   strlen(device_iio_device_name),
+					   "%d", &number);
+			fnamelen = numstrlen + strlen(device_iio_dir) +
+				   strlen(device_iio_device_name);
+			if (fnamelen > DEVICE_IIO_MAX_FILENAME_LEN)
+				continue;
+
+			sprintf(dfilename,
+				"%s%s%d/name",
+				device_iio_dir,
+				device_iio_device_name,
+				number);
+			devilceFile = fopen(dfilename, "r");
+			if (!devilceFile)
+				continue;
+
+			ret = fscanf(devilceFile, "%s", dname);
+			if (ret <= 0) {
+				fclose(devilceFile);
+
+				break;
+			}
+
+			if (strncmp(type,
+                        dname + (strlen(dname) - strlen(type)),
+                        strlen(type)) == 0) {
+				fclose(devilceFile);
+				closedir(dp);
+
 				return number;
 			}
 
@@ -642,9 +712,14 @@ int device_iio_utils::update_fsm_thresholds(char *threshold_data)
 	char fsm_thresholds_filename[DEVICE_IIO_MAX_FILENAME_LEN];
 	int ret, number;
 
-	ret = get_device_by_name(device_iio_mlc_device_name);
-	if (ret < 0)
+	ret = get_device_by_type(device_iio_mlc_device_type);
+	if (ret < 0) {
+        ALOGE("%s: unable to detect device type %s",
+              __FUNCTION__,
+              device_iio_mlc_device_type);
+
 		return ret;
+    }
 
 	number = ret;
 	ret = snprintf(fsm_thresholds_filename,
