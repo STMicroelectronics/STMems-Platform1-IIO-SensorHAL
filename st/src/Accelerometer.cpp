@@ -121,8 +121,8 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 					return;
 				}
 
-	            ALOGD("\"%s\": Updating FSM thresholds %s",
-                      sensor_t_data.name, fsm_th_str);
+				ALOGD("\"%s\": Updating FSM thresholds %s",
+				      sensor_t_data.name, fsm_th_str);
 				ret = device_iio_utils::update_fsm_thresholds(fsm_th_str);
 				if (ret < 0) {
 					ALOGE("\"%s\": Failed to update FSM threshold",
