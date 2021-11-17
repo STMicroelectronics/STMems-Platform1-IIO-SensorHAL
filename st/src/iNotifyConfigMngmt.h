@@ -16,6 +16,10 @@
 enum PARSING_STRING_INDEX {
 	IMU_SENSOR_PLACEMENT_INDEX = 0,
 	IMU_SENSOR_EULER_ANGLES_INDEX,
+	ALGO_TOWING_JACK_DELTA_TH_INDEX,
+	ALGO_TOWING_JACK_MIN_DURATION_INDEX,
+	ALGO_CRASH_IMPACT_TH_INDEX,
+	ALGO_CRASH_MIN_DURATION_INDEX,
 };
 
 struct thread_params_t {
@@ -29,11 +33,15 @@ struct sensor_placement_t {
 
 struct hal_config_t {
 	struct sensor_placement_t sensor_placement;
+	uint16_t algo_towing_jack_delta_th;
+	uint32_t algo_towing_jack_min_duration;
+	uint16_t algo_crash_impact_th;
+	uint32_t algo_crash_min_duration;
 	int loglevel;
 };
 
 int init_notify_loop(char *pathname);
 
-struct hal_config_t* get_sensor_placement(void);
+const struct hal_config_t get_config(void);
 
 #endif /* __HAL_INOTIFY_CONFIGURATION */
