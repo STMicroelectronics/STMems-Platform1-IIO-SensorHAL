@@ -12,7 +12,6 @@
 #define STODR (13)
 #define STSTATICVAR (0.0001F)
 #define STSTATICMEAN (0.1F)
-#define FSMTHR (0.025f)
 
 typedef struct {
     int64_t tLast; //in ms
@@ -45,4 +44,4 @@ void stFSMInit(stFSMSensor *state);
 int8_t computeGravityVector(stFSMSensor *state, float *accData, int64_t time_ns, float *gVec);
 
 /*compute thresholds and provide float16 output*/
-void computeThreshold(float *gvec, uint16_t thresh[][2]);
+void computeThreshold(float *gvec, uint16_t thresh[][2], float threshold);
