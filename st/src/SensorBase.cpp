@@ -762,19 +762,19 @@ void SensorBase::applyRotationMatrix(SensorBaseData& data)
 	float tmp_data[4];
 	memcpy(tmp_data, data.raw, 4 * sizeof(float));
 
-	struct hal_config_t *config = get_sensor_placement();
+	const struct hal_config_t config = get_config();
 
-	data.raw[0] = config->sensor_placement.rot[0][0] * tmp_data[0] +
-		      config->sensor_placement.rot[1][0] * tmp_data[1] +
-		      config->sensor_placement.rot[2][0] * tmp_data[2];
+	data.raw[0] = config.sensor_placement.rot[0][0] * tmp_data[0] +
+		      config.sensor_placement.rot[1][0] * tmp_data[1] +
+		      config.sensor_placement.rot[2][0] * tmp_data[2];
 
-	data.raw[1] = config->sensor_placement.rot[0][1] * tmp_data[0] +
-		      config->sensor_placement.rot[1][1] * tmp_data[1] +
-		      config->sensor_placement.rot[2][1] * tmp_data[2];
+	data.raw[1] = config.sensor_placement.rot[0][1] * tmp_data[0] +
+		      config.sensor_placement.rot[1][1] * tmp_data[1] +
+		      config.sensor_placement.rot[2][1] * tmp_data[2];
 
-	data.raw[2] = config->sensor_placement.rot[0][2] * tmp_data[0] +
-		      config->sensor_placement.rot[1][2] * tmp_data[1] +
-		      config->sensor_placement.rot[2][2] * tmp_data[2];
+	data.raw[2] = config.sensor_placement.rot[0][2] * tmp_data[0] +
+		      config.sensor_placement.rot[1][2] * tmp_data[1] +
+		      config.sensor_placement.rot[2][2] * tmp_data[2];
 }
 
 void SensorBase::ReceiveDataFromDependency(int handle, SensorBaseData *data)
