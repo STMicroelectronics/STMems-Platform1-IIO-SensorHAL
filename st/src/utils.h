@@ -115,7 +115,11 @@ class device_iio_utils {
 		static int set_injection_mode(const char *device_dir, bool enable);
 		static int inject_data(const char *device_dir, unsigned char *data,
 				       int len, device_iio_chan_type_t device_type);
+
 		static int update_fsm_thresholds(char *data);
+		static int update_fsm_jack_min_duration(char *min_duration);
+		static int update_crash_impact_th(char *crash_impact_th);
+		static int update_crash_min_duration(char *crash_min_duration);
 };
 
 #endif /* __DEVICE_IIO_UTILS */
