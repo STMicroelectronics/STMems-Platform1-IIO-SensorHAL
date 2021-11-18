@@ -22,6 +22,8 @@
 #include <math.h>
 #include <mutex>
 
+#include "utils.h"
+
 #include "iNotifyConfigMngmt.h"
 #include "SensorHAL.h"
 
@@ -172,17 +174,89 @@ static uint16_t float16(float in)
 
 static int write_algos_parameters_to_driver(struct hal_config_t *config)
 {
+	int ret;
+
 	if (config->algo_towing_jack_min_duration != 0) {
 		uint16_t value = (config->algo_towing_jack_min_duration * 12.5f) / 17;
-		// TODO write into driver
+		char fsm_str[3 * sizeof(value) * strlen("00,")];
+
+		ret = sprintf(fsm_str,
+			      "%2x,%2x,%2x,%2x,%2x,%2x",
+			      (uint8_t)(value >> 8),
+			      (uint8_t)(value & 0x00FF),
+			      (uint8_t)(value >> 8),
+			      (uint8_t)(value & 0x00FF),
+			      (uint8_t)(value >> 8),
+			      (uint8_t)(value & 0x00FF));
+		if (ret < 0) {
+			ALOGE("\"%s\": Failed to allocate min duration",
+			      __FUNCTION__);
+
+			return ret;
+		}
+
+		ALOGD("\"%s\": Updating towing/jack min duration to %s",
+		      __FUNCTION__, fsm_str);
+		ret = device_iio_utils::update_fsm_jack_min_duration(fsm_str);
+		if (ret < 0) {
+			ALOGE("\"%s\": Failed to update towing/jack min duration",
+			      __FUNCTION__);
+
+			return ret;
+		}
 	}
 	if (config->algo_crash_impact_th != 0) {
 		uint16_t value = float16((config->algo_crash_impact_th / 1000.0f) / 2);
-		// TODO write into driver
+		uint16_t valueth2 = value, valueth1 = value;
+		char fsm_str[2 * sizeof(value) * strlen("00,")];
+
+		ret = sprintf(fsm_str,
+			      "%2x,%2x,%2x,%2x",
+			      (uint8_t)(valueth1 >> 8),
+			      (uint8_t)(valueth1 & 0x00FF),
+			      (uint8_t)(valueth2 >> 8),
+			      (uint8_t)(valueth2 & 0x00FF));
+		if (ret < 0) {
+			ALOGE("\"%s\": Failed to allocate crash impact threshold",
+			      __FUNCTION__);
+
+			return ret;
+		}
+
+		ALOGD("\"%s\": Updating crash impact threshold to %s",
+		      __FUNCTION__, fsm_str);
+		ret = device_iio_utils::update_crash_impact_th(fsm_str);
+		if (ret < 0) {
+			ALOGE("\"%s\": Failed to update crash impact threshold",
+			      __FUNCTION__);
+
+			return ret;
+		}
 	}
 	if (config->algo_crash_min_duration != 0) {
 		uint16_t value = (config->algo_crash_min_duration * 12.5f) / 17;
-		// TODO write into driver
+
+		char fsm_str[sizeof(value) * strlen("00,")];
+		ret = sprintf(fsm_str,
+			      "%2x,%2x",
+			      (uint8_t)(value >> 8),
+			      (uint8_t)(value & 0x00FF));
+		if (ret < 0) {
+			ALOGE("\"%s\": Failed to allocate crash min duration",
+			      __FUNCTION__);
+
+			return ret;
+		}
+
+		ALOGD("\"%s\": Updating crash min duration to %s",
+		      __FUNCTION__, fsm_str);
+		ret = device_iio_utils::update_crash_min_duration(fsm_str);
+		if (ret < 0) {
+			ALOGE("\"%s\": Failed to update crash min duration",
+			      __FUNCTION__);
+
+			return ret;
+		}
 	}
 
 	return 0;
