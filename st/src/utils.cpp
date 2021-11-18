@@ -32,6 +32,9 @@ static const char *device_iio_device_name = "iio:device";
 static const char *device_iio_injection_mode_enable = "injection_mode";
 static const char *device_iio_injection_sensors_filename = "injection_sensors";
 static const char *device_iio_fsm_threshold_filename = "fsm_threshold";
+static const char *device_iio_fsm_jack_min_duration = "towing_jack_min_duration";
+static const char *device_iio_fsm_crash_impact_th = "crash_impact_th";
+static const char *device_iio_fsm_crash_min_duration = "crash_min_duration";
 static const char *device_iio_mlc_device_type = "mlc";
 
 int device_iio_utils::sysfs_write_int(char *file, int val)
@@ -707,6 +710,9 @@ int device_iio_utils::inject_data(const char *device_dir, unsigned char *data,
 	return ret;
 }
 
+/*
+ * Updated the FSM threshold_data
+ */
 int device_iio_utils::update_fsm_thresholds(char *threshold_data)
 {
 	char fsm_thresholds_filename[DEVICE_IIO_MAX_FILENAME_LEN];
@@ -714,22 +720,108 @@ int device_iio_utils::update_fsm_thresholds(char *threshold_data)
 
 	ret = get_device_by_type(device_iio_mlc_device_type);
 	if (ret < 0) {
-        ALOGE("%s: unable to detect device type %s",
-              __FUNCTION__,
+        ALOGE("%s: unable to detect device type %s", __FUNCTION__,
+              device_iio_mlc_device_type);
+
+		return ret;
+	}
+
+	number = ret;
+	ret = snprintf(fsm_thresholds_filename,
+		       DEVICE_IIO_MAX_FILENAME_LEN,
+		       "%s%s%d/%s",
+		       device_iio_dir,
+		       device_iio_device_name,
+		       number,
+		       device_iio_fsm_threshold_filename);
+
+	return ret < 0 ? -ENOMEM : sysfs_write_str(fsm_thresholds_filename,
+						   threshold_data);
+}
+
+/*
+ * Updated the FSM min duration
+ */
+int device_iio_utils::update_fsm_jack_min_duration(char *min_duration)
+{
+	char min_duration_filename[DEVICE_IIO_MAX_FILENAME_LEN];
+	int ret, number;
+
+	ret = get_device_by_type(device_iio_mlc_device_type);
+	if (ret < 0) {
+        ALOGE("%s: unable to detect device type %s", __FUNCTION__,
+              device_iio_mlc_device_type);
+
+		return ret;
+	}
+
+	number = ret;
+	ret = snprintf(min_duration_filename,
+		       DEVICE_IIO_MAX_FILENAME_LEN,
+		       "%s%s%d/%s",
+		       device_iio_dir,
+		       device_iio_device_name,
+		       number,
+		       device_iio_fsm_jack_min_duration);
+
+	return ret < 0 ? -ENOMEM : sysfs_write_str(min_duration_filename,
+						   min_duration);
+}
+
+/*
+ * Updated the FSM update crash_impact_th
+ */
+int device_iio_utils::update_crash_impact_th(char *crash_impact_th)
+{
+	char crash_impact_th_filename[DEVICE_IIO_MAX_FILENAME_LEN];
+	int ret, number;
+
+	ret = get_device_by_type(device_iio_mlc_device_type);
+	if (ret < 0) {
+        ALOGE("%s: unable to detect device type %s", __FUNCTION__,
+              device_iio_mlc_device_type);
+
+		return ret;
+	}
+
+	number = ret;
+	ret = snprintf(crash_impact_th_filename,
+		       DEVICE_IIO_MAX_FILENAME_LEN,
+		       "%s%s%d/%s",
+		       device_iio_dir,
+		       device_iio_device_name,
+		       number,
+		       device_iio_fsm_crash_impact_th);
+
+	return ret < 0 ? -ENOMEM : sysfs_write_str(crash_impact_th_filename,
+						   crash_impact_th);
+}
+
+/*
+ * Updated the FSM update crash_min_duration
+ */
+int device_iio_utils::update_crash_min_duration(char *crash_min_duration)
+{
+	char crash_min_duration_filename[DEVICE_IIO_MAX_FILENAME_LEN];
+	int ret, number;
+
+	ret = get_device_by_type(device_iio_mlc_device_type);
+	if (ret < 0) {
+        ALOGE("%s: unable to detect device type %s", __FUNCTION__,
               device_iio_mlc_device_type);
 
 		return ret;
     }
 
 	number = ret;
-	ret = snprintf(fsm_thresholds_filename,
-				   DEVICE_IIO_MAX_FILENAME_LEN,
-				   "%s%s%d/%s",
-				   device_iio_dir,
-				   device_iio_device_name,
-				   number,
-				   device_iio_fsm_threshold_filename);
+	ret = snprintf(crash_min_duration_filename,
+		       DEVICE_IIO_MAX_FILENAME_LEN,
+		       "%s%s%d/%s",
+		       device_iio_dir,
+		       device_iio_device_name,
+		       number,
+		       device_iio_fsm_crash_min_duration);
 
-	return ret < 0 ? -ENOMEM : sysfs_write_str(fsm_thresholds_filename,
-                                               threshold_data);
+	return ret < 0 ? -ENOMEM : sysfs_write_str(crash_min_duration_filename,
+						   crash_min_duration);
 }
