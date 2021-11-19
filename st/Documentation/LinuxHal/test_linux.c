@@ -103,6 +103,20 @@
 static FILE *logfd;
 #endif /* LOG_FILE */
 
+enum {
+	TOW_JACK_DELTA_THRESHOLD = 0,
+	TOW_JACK_DURATION,
+	CRASH_IMPACT_THRESHOLD,
+	CRASH_MINIMUM_DURATION,
+};
+
+static const char *parsing_strings[] = {
+	"algo_towing_jack_delta_th = ",
+	"algo_towing_jack_min_duration = ",
+	"algo_crash_impact_th = ",
+	"algo_crash_min_duration = "
+};
+
 /**
  * struct iio_event_data - The actual event being pushed to userspace
  * @id:		event identifier
@@ -150,6 +164,12 @@ static const struct option long_options[] = {
 		{"accpm",     required_argument, 0,  'p' },
 		{"rotmat",    required_argument, 0,  'r' },
 		{"position",  required_argument, 0,  'z' },
+
+		{"tjth",      required_argument, 0,  'y' },
+		{"tjdur",     required_argument, 0,  'w' },
+		{"cith",      required_argument, 0,  'c' },
+		{"cmdur",     required_argument, 0,  'x' },
+
 		{"ign_cmd",   required_argument, 0,  'I' },
 		{"help",      no_argument,       0,  '?' },
 		{0,           0,                 0,   0  }
@@ -584,6 +604,14 @@ static void help(char *argv)
 	printf("\t--%s:\tUpdate HAL rotation matrix (\"yaw,pitch,roll\")\n",
 	       long_options[index++].name);
 	printf("\t--%s:\tUpdate HAL sensor position (\"x,y,z\")\n",
+	       long_options[index++].name);
+	printf("\t--%s:\t\tUpdate algo towing jack delta th (\"100-1000mg\")\n",
+	       long_options[index++].name);
+	printf("\t--%s:\tUpdate algo towing jack min duration (\"1-89000 seconds\")\n",
+	       long_options[index++].name);
+	printf("\t--%s:\t\tUpdate algo crash impact th (\"100-2000mg\")\n",
+	       long_options[index++].name);
+	printf("\t--%s:\tUpdate algo crash min duration (\"1-89000 seconds\")\n",
 	       long_options[index++].name);
 	printf("\t--%s:\tRun Ignition command on SensorHAL (data 0/1)\n",
 	       long_options[index++].name);
@@ -1152,6 +1180,74 @@ err_out:
 	return err;
 }
 
+int update_hal_config_param(char *path, char *file, int type,
+			    unsigned int value)
+{
+	char *file_path_name = NULL;
+	char *buffer_string = NULL;
+	FILE *fd_config = NULL;
+	int len = 0;
+	int err = 0;
+	char *ptr;
+	int size;
+
+	file_path_name = (char *)calloc(strlen(path) + strlen(file) + 2, 1);
+	if (!file_path_name) {
+		tl_debug("Unable to allocate memory (errno %d)\n", err);
+
+		return -ENOMEM;
+	}
+
+	sprintf(file_path_name, "%s/%s", path, file);
+	fd_config = fopen(file_path_name, "w+");
+	if (!fd_config) {
+		err = -errno;
+		tl_debug("Filed to open %s (errno %d)\n",
+			 file_path_name, err);
+
+		goto err_out;
+	}
+
+	size = strlen(parsing_strings[type]) + 10;
+	buffer_string = (char *)calloc(size, 1);
+	if (!buffer_string) {
+		err = -errno;
+		tl_debug("Unable to allocate memory (errno %d)\n", err);
+
+		goto err_out;
+	}
+
+	if (type == TOW_JACK_DELTA_THRESHOLD || type == CRASH_IMPACT_THRESHOLD)
+		size = sprintf(buffer_string, "%s%u",
+			       parsing_strings[type], value);
+	else
+		size = sprintf(buffer_string, "%s%hu",
+			       parsing_strings[type], value);
+
+	tl_debug("Update file in %s with %s\n", file_path_name,
+		 buffer_string);
+	len = fwrite(buffer_string, 1, size, fd_config);
+	if (!len) {
+		err = -errno;
+		tl_debug("Filed to write data to %s (errno %d)\n",
+			 file_path_name, err);
+	}
+
+err_out:
+	if (fd_config) {
+		fclose(fd_config);
+	}
+
+	if (file_path_name) {
+		free(file_path_name);
+	}
+
+	if (buffer_string) {
+		free(buffer_string);
+	}
+
+	return err;
+}
 
 int main(int argc, char **argv)
 {
@@ -1170,6 +1266,10 @@ int main(int argc, char **argv)
 	int ign_data = 0;
 	char *rm_value = NULL;
 	char *sp_value = NULL;
+	unsigned int tjth = 0;
+	unsigned int tjdur = 0;
+	unsigned int cith = 0;
+	unsigned int cmdur = 0;
 
 #ifdef LOG_FILE
 	char *log_filename = NULL;
@@ -1254,6 +1354,18 @@ int main(int argc, char **argv)
 		case 'I':
 			ign_flag = 1;
 			ign_data = atoi(optarg);
+			break;
+		case 'y':
+			tjth = atoi(optarg);
+			break;
+		case 'w':
+			tjdur = atoi(optarg);
+			break;
+		case 'c':
+			cith = atoi(optarg);
+			break;
+		case 'x':
+			cmdur = atoi(optarg);
 			break;
 		case 'v':
 			printf("Version %s\n", TEST_LINUX_VERSION);
@@ -1385,6 +1497,30 @@ int main(int argc, char **argv)
 
 	if (ign_flag)
 		hmi->ignition_on_off(ign_data);
+
+	if (tjth > 0)
+		update_hal_config_param(HAL_CONFIGURATION_PATH,
+					HAL_CONFIGURATION_FILE,
+					TOW_JACK_DELTA_THRESHOLD,
+					tjth);
+
+	if (tjdur > 0)
+		update_hal_config_param(HAL_CONFIGURATION_PATH,
+					HAL_CONFIGURATION_FILE,
+					TOW_JACK_DURATION,
+					tjdur);
+
+	if (cith > 0)
+		update_hal_config_param(HAL_CONFIGURATION_PATH,
+					HAL_CONFIGURATION_FILE,
+					CRASH_IMPACT_THRESHOLD,
+					cith);
+
+	if (cmdur > 0)
+		update_hal_config_param(HAL_CONFIGURATION_PATH,
+					HAL_CONFIGURATION_FILE,
+					CRASH_MINIMUM_DURATION,
+					cmdur);
 
 	if (sensor_handle >= 0)
 		single_sensor_test(sensor_handle);
