@@ -206,9 +206,9 @@ static int write_algos_parameters_to_driver(struct hal_config_t *config)
 		}
 	}
 	if (config->algo_crash_impact_th != 0) {
-		uint16_t value = float16((config->algo_crash_impact_th / 1000.0f) / 2);
-		uint16_t valueth2 = value, valueth1 = value;
-		char fsm_str[2 * sizeof(value) * strlen("00,")];
+		uint16_t valueth2 = float16((config->algo_crash_impact_th / 1000.0f) / 2);
+		uint16_t valueth1 = float16(-(config->algo_crash_impact_th / 1000.0f) / 2);
+		char fsm_str[2 * sizeof(uint16_t) * strlen("00,")];
 
 		ret = sprintf(fsm_str,
 			      "%2x,%2x,%2x,%2x",
