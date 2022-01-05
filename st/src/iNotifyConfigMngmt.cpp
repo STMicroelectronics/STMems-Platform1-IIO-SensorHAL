@@ -267,10 +267,19 @@ static int update_algo_towing_delta_th(struct hal_config_t *config,
 				       char *data, int len)
 {
 	std::lock_guard<std::mutex> lock(configMutex);
+	uint16_t algo_towing_jack_delta_th;
 
-	if (sscanf(data, "%hu", &config->algo_towing_jack_delta_th) != 1) {
+	if (sscanf(data, "%hu", &algo_towing_jack_delta_th) != 1) {
 		return -EINVAL;
 	}
+
+	/* check algo towing jack delta th interval [100-1000] mg */
+	if (algo_towing_jack_delta_th < 100)
+		algo_towing_jack_delta_th = 100;
+	if (algo_towing_jack_delta_th > 1000)
+		algo_towing_jack_delta_th = 1000;
+
+	config->algo_towing_jack_delta_th = algo_towing_jack_delta_th;
 
 	return 0;
 }
@@ -285,6 +294,15 @@ static int update_algo_min_duration(struct hal_config_t *config,
 	if (sscanf(data, "%u", &duration) != 1) {
 		return -EINVAL;
 	}
+
+	/*
+	 * check if towing jack min duration and crash min duration
+	 * interval in [1-89000] s
+	 */
+	if (duration < 1)
+		duration = 1;
+	if (duration > 89000)
+		duration = 89000;
 
 	switch (index) {
 	case ALGO_TOWING_JACK_MIN_DURATION_INDEX:
@@ -305,10 +323,19 @@ static int update_algo_crash_impact_th(struct hal_config_t *config,
 				       char *data, int len)
 {
 	std::lock_guard<std::mutex> lock(configMutex);
+	uint16_t algo_crash_impact_th;
 
-	if (sscanf(data, "%hu", &config->algo_crash_impact_th) != 1) {
+	if (sscanf(data, "%hu", &algo_crash_impact_th) != 1) {
 		return -EINVAL;
 	}
+
+	/* check crash impact th interval [100-2000] mg */
+	if (algo_crash_impact_th < 100)
+		algo_crash_impact_th = 100;
+	if (algo_crash_impact_th > 2000)
+		algo_crash_impact_th = 2000;
+
+	config->algo_crash_impact_th = algo_crash_impact_th;
 
 	return 0;
 }
