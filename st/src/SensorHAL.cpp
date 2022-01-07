@@ -1234,7 +1234,9 @@ rollback_operation_mode:
 #if CONFIG_ST_HAL_CONFIG_INOTIFY_ENABLED
 __attribute__((constructor)) void init(void)
 {
-	init_notify_loop(HAL_CONFIGURATION_PATH);
+	STSensorHAL_data *hal_data =
+		     (STSensorHAL_data *)HAL_MODULE_INFO_SYM.common.dso;
+	init_notify_loop(HAL_CONFIGURATION_PATH, hal_data);
 }
 
 __attribute__((destructor)) void fini(void)
