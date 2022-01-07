@@ -25,7 +25,6 @@
 #include "utils.h"
 
 #include "iNotifyConfigMngmt.h"
-#include "SensorHAL.h"
 
 static const char *parsing_strings[] = {
 	"imu_sensor_placement = ",
@@ -33,7 +32,8 @@ static const char *parsing_strings[] = {
 	"algo_towing_jack_delta_th = ",
 	"algo_towing_jack_min_duration = ",
 	"algo_crash_impact_th = ",
-	"algo_crash_min_duration = "
+	"algo_crash_min_duration = ",
+	"ignition_off = ",
 };
 
 static volatile int run = 1;
@@ -340,6 +340,36 @@ static int update_algo_crash_impact_th(struct hal_config_t *config,
 	return 0;
 }
 
+static int update_ignition_off(struct hal_config_t *config,
+			       enum PARSING_STRING_INDEX index,
+			       char *data, int len)
+{
+	std::lock_guard<std::mutex> lock(configMutex);
+	uint32_t ignition_off;
+
+	if (sscanf(data, "%u", &ignition_off) != 1) {
+		return -EINVAL;
+	}
+
+	config->ignition_off = ignition_off;
+
+	return 0;
+}
+
+static int ignition_off_check_and_run(struct hal_config_t *config,
+				      STSensorHAL_data *hal_data)
+{
+	std::lock_guard<std::mutex> lock(configMutex);
+	int ret = 0;
+
+	if (config->ignition_off && hal_data) {
+		ret = hal_data->sensor_classes[hal_data->sensor_t_list[0].handle]->Ignition(config->ignition_off);
+		config->ignition_off = 0;
+	}
+
+	return ret;
+}
+
 static int update_file_data(const char *file, char *path)
 {
 	char *file_path_name = NULL;
@@ -423,6 +453,13 @@ static int update_file_data(const char *file, char *path)
 		ptr += strlen(parsing_strings[ALGO_CRASH_MIN_DURATION_INDEX]);
 
 		update_algo_min_duration(&hal_config, ALGO_CRASH_MIN_DURATION_INDEX, ptr, ptr - buffer_string);
+	}
+
+	ptr = strstr(buffer_string, parsing_strings[IGNITION_OFF_INDEX]);
+	if (ptr) {
+		ptr += strlen(parsing_strings[IGNITION_OFF_INDEX]);
+
+		update_ignition_off(&hal_config, IGNITION_OFF_INDEX, ptr, ptr - buffer_string);
 	}
 
 err_out:
@@ -523,8 +560,11 @@ static void *hal_configuration_thread(void *parm)
 				}
 			}
 
-		i += sizeof(struct inotify_event) + event->len;
+			i += sizeof(struct inotify_event) + event->len;
 		}
+
+		ignition_off_check_and_run(&hal_config,
+					   thread_params->hal_data);
 	}
 
 	if (fd >= 0) {
@@ -543,7 +583,7 @@ static void *hal_configuration_thread(void *parm)
 	pthread_exit((void *)0);
 }
 
-int init_notify_loop(char *pathname)
+int init_notify_loop(char *pathname, STSensorHAL_data *hal_data)
 {
 	static struct thread_params_t thread_params;
 	static struct sigaction sa;
@@ -567,6 +607,7 @@ int init_notify_loop(char *pathname)
 	}
 
 	thread_params.pathname = pathname;
+	thread_params.hal_data = hal_data;
 	status = pthread_create(&threadid, NULL,
 				hal_configuration_thread,
 				(void *)&thread_params);
