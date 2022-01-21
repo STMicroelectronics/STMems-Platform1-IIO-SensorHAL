@@ -273,9 +273,9 @@ static int update_algo_towing_delta_th(struct hal_config_t *config,
 		return -EINVAL;
 	}
 
-	/* check algo towing jack delta th interval [100-1000] mg */
-	if (algo_towing_jack_delta_th < 100)
-		algo_towing_jack_delta_th = 100;
+	/* check algo towing jack delta th interval [10-1000] mg */
+	if (algo_towing_jack_delta_th < 10)
+		algo_towing_jack_delta_th = 10;
 	if (algo_towing_jack_delta_th > 1000)
 		algo_towing_jack_delta_th = 1000;
 
