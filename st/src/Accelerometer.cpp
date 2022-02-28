@@ -89,7 +89,7 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 		acc[2] = data.raw[2] / GRAVITY_EARTH;
 
 		if (isStatic == 0){
-			isStatic =  computeGravityVector(&state, acc, data.timestamp, gVec);
+			isStatic = computeGravityVector(&state, acc, data.timestamp, gVec);
 			if (isStatic) {
 				int ret;
 				int16_t nLoop;
@@ -97,31 +97,31 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 				uint16_t thresh[3][2];
 				uint8_t thresh_hex[3][4];
 				char fsm_th_str[sizeof(thresh_hex) * strlen("00,")];
-
 				const struct hal_config_t& config = get_config();
+
 				threshold = config.algo_towing_jack_delta_th / 1000.0f;
 
 				computeThreshold(gVec, thresh, threshold);
 
 				for (nLoop = 0; nLoop < 3; nLoop++) {
-					thresh_hex[nLoop][0] = (uint8_t)(thresh[0][0] & 0x00FF);
-					thresh_hex[nLoop][1] = (uint8_t)(thresh[0][0] >> 8);
-					thresh_hex[nLoop][2] = (uint8_t)(thresh[0][1] & 0x00FF);
-					thresh_hex[nLoop][3] = (uint8_t)(thresh[0][1] >> 8);
+					thresh_hex[nLoop][0] = (uint8_t)(thresh[nLoop][0] & 0x00FF);
+					thresh_hex[nLoop][1] = (uint8_t)(thresh[nLoop][0] >> 8);
+					thresh_hex[nLoop][2] = (uint8_t)(thresh[nLoop][1] & 0x00FF);
+					thresh_hex[nLoop][3] = (uint8_t)(thresh[nLoop][1] >> 8);
 				}
 
 				// store thresholds into sensors fsm registers
 				ret = sprintf(fsm_th_str,
-							   "%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x",
-							   thresh_hex[0][1], thresh_hex[0][0],
-							   thresh_hex[0][3], thresh_hex[0][2],
-							   thresh_hex[1][1], thresh_hex[1][0],
-							   thresh_hex[1][3], thresh_hex[1][2],
-							   thresh_hex[2][1], thresh_hex[2][0],
-							   thresh_hex[2][3], thresh_hex[2][2]);
+					      "%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x,%2x",
+					      thresh_hex[0][1], thresh_hex[0][0],
+					      thresh_hex[0][3], thresh_hex[0][2],
+					      thresh_hex[1][1], thresh_hex[1][0],
+					      thresh_hex[1][3], thresh_hex[1][2],
+					      thresh_hex[2][1], thresh_hex[2][0],
+					      thresh_hex[2][3], thresh_hex[2][2]);
 				if (ret < 0) {
 					ALOGE("\"%s\": Failed to allocate FSM threshold",
-						  sensor_t_data.name);
+					      sensor_t_data.name);
 
 					return;
 				}
@@ -131,7 +131,7 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 				ret = device_iio_utils::update_fsm_thresholds(fsm_th_str);
 				if (ret < 0) {
 					ALOGE("\"%s\": Failed to update FSM threshold",
-						  sensor_t_data.name);
+					      sensor_t_data.name);
 
 					return;
 				}
