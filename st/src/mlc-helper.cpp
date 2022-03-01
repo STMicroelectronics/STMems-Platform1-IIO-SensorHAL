@@ -181,7 +181,7 @@ void computeThreshold(float *gvec, uint16_t thresh[][2], float threshold)
 	int16_t nLoop;
 
 	for (nLoop = 0; nLoop < 3; nLoop++) {
-		thresh[nLoop][0] = float16(gvec[nLoop] + threshold);
-		thresh[nLoop][1] = float16(gvec[nLoop] - threshold);
+		thresh[nLoop][1] = float16(gvec[nLoop] + threshold);
+		thresh[nLoop][0] = float16(gvec[nLoop] - threshold);
 	}
 }
