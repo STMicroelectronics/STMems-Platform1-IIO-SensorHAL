@@ -297,10 +297,10 @@ static int update_algo_min_duration(struct hal_config_t *config,
 
 	/*
 	 * check if towing jack min duration and crash min duration
-	 * interval in [1-89000] s
+	 * interval in [2-89000] s
 	 */
-	if (duration < 1)
-		duration = 1;
+	if (duration < 2)
+		duration = 2;
 	if (duration > 89000)
 		duration = 89000;
 
