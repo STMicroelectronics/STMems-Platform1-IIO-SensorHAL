@@ -518,6 +518,7 @@ static void *hal_configuration_thread(void *parm)
 	update_file_data(HAL_CONFIGURATION_FILE, thread_params->pathname);
 	write_algos_parameters_to_driver(&hal_config);
 	show_sensor_placement(&hal_config);
+	ignition_off_check_and_run(&hal_config, thread_params->hal_data);
 
 	wd = inotify_add_watch(fd, thread_params->pathname, IN_CLOSE);
 	if (wd < 0) {
