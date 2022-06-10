@@ -328,8 +328,10 @@ static int st_hal_set_fullscale(char *device_iio_sysfs_path, int sensor_type,
 static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor,
 				 STSensorHAL_device_iio_devices_data *data)
 {
+	int fd;
 	int err;
 	int gyro_num;
+	char *buffer_path;
 	const char *name_channel_gyro[] = {
 			"in_anglvel_x",
 			"in_anglvel_y",
@@ -375,6 +377,24 @@ static int st_hal_load_gyro_data(const struct ST_sensors_supported *stsensor,
 						    &data->channels[index].scale,
 						    DEVICE_IIO_GYRO);
 		}
+
+	/* check if file already opened by other process */
+	err = asprintf(&buffer_path, "/dev/iio:device%d", data->dev_id);
+	if (err <= 0) {
+		ALOGE("%s: Failed to allocate iio device path string.",
+		      __FUNCTION__);
+		goto st_hal_load_free_device_iio_channels;
+	}
+
+	fd = open(buffer_path, O_RDONLY | O_NONBLOCK);
+	if (fd < 0) {
+		ALOGE("%s: Failed to open iio char device (%s)." ,
+		      __FUNCTION__,
+		      buffer_path);
+		goto st_hal_load_free_device_iio_channels;
+	}
+
+	close(fd);
 
 	err = device_iio_utils::enable_sensor(data->device_iio_sysfs_path, false);
 	if (err < 0) {
@@ -449,8 +469,10 @@ st_hal_load_free_device_iio_channels:
 static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor,
 				STSensorHAL_device_iio_devices_data *data)
 {
+	int fd;
 	int err;
 	int acc_num;
+	char *buffer_path;
 	const char *name_channel_acc[] = {
 			"in_accel_x",
 			"in_accel_y",
@@ -497,6 +519,24 @@ static int st_hal_load_acc_data(const struct ST_sensors_supported *stsensor,
 						    &data->channels[index].scale,
 						    DEVICE_IIO_ACC);
 		}
+
+	/* check if file already opened by other process */
+	err = asprintf(&buffer_path, "/dev/iio:device%d", data->dev_id);
+	if (err <= 0) {
+		ALOGE("%s: Failed to allocate iio device path string.",
+		      __FUNCTION__);
+		goto st_hal_load_free_device_iio_channels;
+	}
+
+	fd = open(buffer_path, O_RDONLY | O_NONBLOCK);
+	if (fd < 0) {
+		ALOGE("%s: Failed to open iio char device (%s)." ,
+		      __FUNCTION__,
+		      buffer_path);
+		goto st_hal_load_free_device_iio_channels;
+	}
+
+	close(fd);
 
 	err = device_iio_utils::enable_sensor(data->device_iio_sysfs_path, false);
 	if (err < 0) {
