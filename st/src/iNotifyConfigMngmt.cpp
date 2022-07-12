@@ -102,16 +102,16 @@ static void update_rotation_matrix(struct hal_config_t *config, float yawd, floa
 	float pitch = (pitchd / 10.0f) * M_PI / 180.0f;
 	float roll = (rolld / 10.0f) * M_PI / 180.0f;
 
-	config->sensor_placement.rot[0][0] = cos(yaw) * cos(roll) - sin(yaw) * sin(pitch) * sin(roll);
-	config->sensor_placement.rot[0][1] = -sin(yaw) * cos(pitch);
-	config->sensor_placement.rot[0][2] = cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll);
+	config->sensor_placement.rot[0][0] = cos(yaw) * cos(roll) + sin(yaw) * sin(pitch) * sin(roll);
+	config->sensor_placement.rot[0][1] = -sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll);
+	config->sensor_placement.rot[0][2] = cos(pitch) * sin(roll);
 
-	config->sensor_placement.rot[1][0] = sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll);
+	config->sensor_placement.rot[1][0] = sin(yaw) * cos(pitch);
 	config->sensor_placement.rot[1][1] = cos(yaw) * cos(pitch);
-	config->sensor_placement.rot[1][2] = sin(yaw) * sin(roll) - cos(yaw) * sin(pitch) * cos(roll);
+	config->sensor_placement.rot[1][2] = -sin(pitch);
 
-	config->sensor_placement.rot[2][0] = -cos(pitch) * sin(roll);
-	config->sensor_placement.rot[2][1] = sin(pitch);
+	config->sensor_placement.rot[2][0] = -cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll);
+	config->sensor_placement.rot[2][1] = sin(yaw) * sin(roll) + cos(yaw) * sin(pitch) * cos(roll);
 	config->sensor_placement.rot[2][2] = cos(pitch) * cos(roll);
 }
 
