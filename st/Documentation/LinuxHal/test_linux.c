@@ -252,14 +252,16 @@ static void apply_rotation(float yawd, float pitchd, float rolld)
 	float pitch = (pitchd / 10.0f) * M_PI / 180.0f;
 	float roll = (rolld / 10.0f) * M_PI / 180.0f;
 
-	rot[0][0] = cos(yaw) * cos(roll) - sin(yaw) * sin(pitch) * sin(roll);
-	rot[0][1] = sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll);
-	rot[0][2] = -cos(pitch) * sin(roll);
-	rot[1][0] = -sin(yaw) * cos(pitch);
+	rot[0][0] = cos(yaw) * cos(roll) + sin(yaw) * sin(pitch) * sin(roll);
+	rot[0][1] = -sin(yaw) * cos(roll) + cos(yaw) * sin(pitch) * sin(roll);
+	rot[0][2] = cos(pitch) * sin(roll);
+
+	rot[1][0] = sin(yaw) * cos(pitch);
 	rot[1][1] = cos(yaw) * cos(pitch);
-	rot[1][2] = sin(pitch);
-	rot[2][0] = cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll);
-	rot[2][1] = sin(yaw) * sin(roll) - cos(yaw) * sin(pitch) * cos(roll);
+	rot[1][2] = -sin(pitch);
+
+	rot[2][0] = -cos(yaw) * sin(roll) + sin(yaw) * sin(pitch) * cos(roll);
+	rot[2][1] = sin(yaw) * sin(roll) + cos(yaw) * sin(pitch) * cos(roll);
 	rot[2][2] = cos(pitch) * cos(roll);
 
 	tl_log("\t%f %f %f\n\t%f %f %f\n\t%f %f %f\n",
@@ -1108,7 +1110,7 @@ err_out:
 		free(buffer_string);
 	}
 
-	size = sscanf(rm_value, "%f,%f,%f", &yaw, &pitch, &roll);
+	size = sscanf(rm_value, "%f,%f,%f", &roll, &pitch, &yaw);
 	if (size > 0) {
 		apply_rotation(yaw, pitch, roll);
 	}
