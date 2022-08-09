@@ -52,6 +52,8 @@ Accelerometer::~Accelerometer()
 int Accelerometer::Ignition(int status)
 {
 	if (status) {
+		fsmNextState = RESET;
+		SetDelay(10, 1e9 / 26, 0, true);
 		Enable(10, true, true);
 	}
 
@@ -140,6 +142,7 @@ void Accelerometer::calculateThresholdMLC(SensorBaseData &data)
 					return;
 				}
 
+				fsmNextState = RESET;
 				Enable(10, false, true);
 			}
 		}
