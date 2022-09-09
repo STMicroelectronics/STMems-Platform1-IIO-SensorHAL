@@ -55,6 +55,12 @@
 		#define tl_log(fmt, ...) printf("%s:%s:%s:%d > " fmt "\n", \
 				    LOG_TAG, __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__)
 	#endif /* LOG_FILE */
+	#ifdef PYTHON_OUTPUT
+		#define py_print(fmt, ...) printf("[PYTST] " fmt "\n", ##__VA_ARGS__); \
+				fflush(stdout)
+	#else /* PYTHON_OUTPUT */
+		#define py_print(fmt, ...)
+	#endif /* PYTHON_OUTPUT */
 #endif /* ANDROID_LOG */
 
 /* Max event buffer for poll sensor */
@@ -286,6 +292,15 @@ static void dump_event(struct sensors_event_t *e)
 	case SENSOR_TYPE_ACCELEROMETER:
 		if (start_sensortime[0] == 0LL)
 			start_sensortime[0] = e->timestamp;
+		py_print("ACC event: x=%10.2f y=%10.2f z=%10.2f timestamp=%lld systime=%lld delta=%lld Module %f  x=%10.2f y=%10.2f z=%10.2f",
+			e->acceleration.x, e->acceleration.y, e->acceleration.z,
+			e->timestamp - start_sensortime[0],
+			sec_usec - start_systime,
+			((sec_usec - start_systime) * 1000) - (e->timestamp - start_sensortime[0]),
+			sqrt(pow(e->acceleration.x, 2) + pow(e->acceleration.y, 2) + pow(e->acceleration.z, 2)),
+			rot[0][0] * e->acceleration.x + rot[0][1] * e->acceleration.y + rot[0][2] * e->acceleration.z,
+			rot[1][0] * e->acceleration.x + rot[1][1] * e->acceleration.y + rot[1][2] * e->acceleration.z,
+			rot[2][0] * e->acceleration.x + rot[2][1] * e->acceleration.y + rot[2][2] * e->acceleration.z);
 		tl_log("ACC event: x=%10.2f y=%10.2f z=%10.2f timestamp=%lld systime=%lld delta=%lld Module %f  x=%10.2f y=%10.2f z=%10.2f",
 			e->acceleration.x, e->acceleration.y, e->acceleration.z,
 			e->timestamp - start_sensortime[0],
@@ -300,6 +315,11 @@ static void dump_event(struct sensors_event_t *e)
 		if (start_sensortime[1] == 0LL)
 			start_sensortime[1] = e->timestamp;
 		tl_log("GYRO event: x=%10.2f y=%10.2f z=%10.2f timestamp=%lld systime=%lld delta=%lld",
+			e->gyro.x, e->gyro.y, e->gyro.z,
+			e->timestamp - start_sensortime[1],
+			sec_usec - start_systime,
+			((sec_usec - start_systime) * 1000) - (e->timestamp - start_sensortime[0]));
+		py_print("GYRO event: x=%10.2f y=%10.2f z=%10.2f timestamp=%lld systime=%lld delta=%lld",
 			e->gyro.x, e->gyro.y, e->gyro.z,
 			e->timestamp - start_sensortime[1],
 			sec_usec - start_systime,
@@ -896,6 +916,11 @@ static void print_event(struct iio_event_data *event)
 	pevent = (unsigned char *)event;
 
 	tl_debug("Event: %x %x %x %x %x %x %x %x time: %lld\n",
+		pevent[0], pevent[1], pevent[2], pevent[3],
+		pevent[4], pevent[5], pevent[6], pevent[7],
+		event->timestamp);
+
+	py_print("Event: %x %x %x %x %x %x %x %x time: %lld\n",
 		pevent[0], pevent[1], pevent[2], pevent[3],
 		pevent[4], pevent[5], pevent[6], pevent[7],
 		event->timestamp);
