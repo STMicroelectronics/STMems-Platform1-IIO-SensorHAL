@@ -1276,6 +1276,95 @@ err_out:
 	return err;
 }
 
+static int ignition_toggle(int ign_state)
+{
+	char *hal_config_path = NULL;
+	FILE *fd_hal_config = NULL;
+	char *buffer_string = NULL;
+	char *line_buffer = NULL;
+	size_t file_pos = 0;
+	size_t size = 256;
+	int len = 0;
+	int err = 0;
+
+	if (ign_state != 0 && ign_state != 1) {
+		printf("Invalid value for ign_state: %d.\n", ign_state);
+		return -EINVAL;
+	}
+
+	len = strlen(HAL_CONFIGURATION_FILE) + strlen(HAL_CONFIGURATION_PATH) + 2;
+	hal_config_path = malloc(len);
+	if (!hal_config_path) {
+		printf("Failed to allocate memory for hal_config_path (errno %d).\n", -errno);
+		return -ENOMEM;
+	}
+	memset(hal_config_path, 0, len);
+
+	snprintf(hal_config_path, len, "%s/%s", HAL_CONFIGURATION_PATH, HAL_CONFIGURATION_FILE);
+	fd_hal_config = fopen(hal_config_path, "r+");
+	if (!fd_hal_config) {
+		err = -errno;
+		printf("Failed to open %s (errno %d)\n", hal_config_path, -errno);
+		goto free_hal_config_path;
+	}
+
+	buffer_string = malloc(size + 1);
+	if (!buffer_string) {
+		err = -errno;
+		printf("Unable to allocate buffer (errno: %d)\n", err);
+		goto close_fd_hal_config;
+	}
+	memset(buffer_string, 0, size);
+
+	line_buffer = malloc(size + 1);
+	if (!line_buffer) {
+		err = -errno;
+		printf("Unable to allocate line_buffer. (errno: %d)\n", err);
+		goto free_line_buffer;
+	}
+	memset(line_buffer, 0, size);
+
+	len = strlen("ignition_off = 0\n");
+	size = snprintf(buffer_string, len + 1, "ignition_off = %1u\n", ign_state);
+
+	// update file
+	int found = 0;
+	while (fgets(line_buffer, size, fd_hal_config) != NULL) {
+		if (strstr(line_buffer, "ignition_off = ")) {
+			file_pos = strlen(line_buffer);
+			fseek(fd_hal_config, -file_pos, SEEK_CUR);
+			len = fwrite(buffer_string, sizeof(char), size, fd_hal_config);
+			if (len != size) {
+				err = -errno;
+				printf("Failed to write %s to file %s (errno %d).\n", buffer_string, hal_config_path, err);
+			} else {
+				err = 0;
+				printf("Updated ignition_off = %d\n", ign_state);
+			}
+			found = 1;
+			break;
+		}
+	}
+	if (found == 0) {
+		fseek(fd_hal_config, -file_pos, SEEK_END);
+		len = fwrite(buffer_string, sizeof(char), size, fd_hal_config);
+		if (len != size) {
+			err = errno;
+			printf("Failed to write %s to file %s (errno %d).\n", buffer_string, fd_hal_config, err);
+		}
+	}
+
+	free(line_buffer);
+free_line_buffer:
+	free(buffer_string);
+close_fd_hal_config:
+	fclose(fd_hal_config);
+free_hal_config_path:
+	free(hal_config_path);
+
+	return err < 0 ? err : 0;
+}
+
 int main(int argc, char **argv)
 {
 	int ret;
@@ -1467,16 +1556,26 @@ int main(int argc, char **argv)
 		break;
 	}
 
-	if (wait_events) {
-		/* set loop until CTRL^Z */
-		test_events = 1;
-		poll_events(mlc_wait_events_device_number);
-	}
-
 	ret = open_hal(NULL);
 	if (ret) {
 		fprintf(stderr, "ERROR: unable to open SensorHAL\n");
 		exit(1);
+	}
+
+	if (ign_flag) {
+		ignition_toggle(ign_data);
+		// The algorithm checking if the ignition is updated does not have an
+		// asynchronous callback so we need to wait 3s to give the algorithm
+		// enough time.
+		sleep(3);
+		ignition_toggle(0);
+	}
+
+	if (wait_events) {
+		/* set loop until CTRL^Z */
+		test_events = 1;
+		poll_events(mlc_wait_events_device_number);
+
 	}
 
 	sensor_num = hmi->get_sensors_list(hmi, &list);
@@ -1522,8 +1621,7 @@ int main(int argc, char **argv)
 					    HAL_CONFIGURATION_FILE,
 					    sp_value);
 
-	if (ign_flag)
-		hmi->ignition_on_off(ign_data);
+
 
 	if (tjth > 0)
 		update_hal_config_param(HAL_CONFIGURATION_PATH,
