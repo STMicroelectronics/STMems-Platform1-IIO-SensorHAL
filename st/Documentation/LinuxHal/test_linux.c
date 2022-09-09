@@ -188,6 +188,7 @@ static const char *hal_paths[] = {
 	"/home/pi/SensorHAL.so",
 	"/system/vendor/lib64/hw/SensorHAL.so",
 	"/system/vendor/lib/hw/SensorHAL.so",
+	"/lib/SensorHAL.so",
 };
 
 static const char* types[] = {
