@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
 #include <poll.h>
@@ -959,7 +960,7 @@ static int enable_events(int iio_device_number, int enable)
 	return ret;
 }
 
-static int poll_events(int iio_device_number)
+static int poll_events(int iio_device_number, int timeout_s)
 {
 	int fd = -1;
 	int event_fd = -1;
@@ -996,23 +997,30 @@ static int poll_events(int iio_device_number)
 		goto exit_poll;
 	}
 
-	while (test_events) {
+	if (timeout_s <= 1) {
+		alarm(0);
+		timeout = 0;
+	} else {
+		alarm(timeout_s);
+	}
+
+	while (test_events && !timeout) {
 		ret = read(event_fd, &event, sizeof(event));
 		if (ret == -1) {
-			if (errno == EAGAIN) {
-				tl_debug("nothing available\n");
-				continue;
-			} else {
+			if (errno != EAGAIN) {
 				perror("Failed to read event from device");
 				ret = -errno;
 				break;
 			}
 		}
 
-		print_event(&event);
+		if (ret == sizeof(event)) {
+			print_event(&event);
+		}
 	}
 
 exit_poll:
+	alarm(0);
 	ret = enable_events(iio_device_number, 0);
 	if (ret < 0)
 		return ret;
@@ -1022,7 +1030,7 @@ exit_poll:
 
 	if (event_fd)
 		close(event_fd);
-
+	timeout = 0;
 	return ret;
 }
 
@@ -1574,8 +1582,7 @@ int main(int argc, char **argv)
 	if (wait_events) {
 		/* set loop until CTRL^Z */
 		test_events = 1;
-		poll_events(mlc_wait_events_device_number);
-
+		poll_events(mlc_wait_events_device_number, samples_timeout);
 	}
 
 	sensor_num = hmi->get_sensors_list(hmi, &list);
@@ -1646,12 +1653,12 @@ int main(int argc, char **argv)
 					HAL_CONFIGURATION_FILE,
 					CRASH_MINIMUM_DURATION,
 					cmdur);
-
-	if (sensor_handle >= 0)
-		single_sensor_test(sensor_handle);
-	else
-		all_sensor_test(notemp);
-
+	if (!wait_events) {
+		if (sensor_handle >= 0)
+			single_sensor_test(sensor_handle);
+		else
+			all_sensor_test(notemp);
+	}
 	ctrlzHandler(wait_events);
 
 	return 0;
