@@ -1125,7 +1125,7 @@ int update_hal_rotation_matrix(char *path, char *file, char *rm_value)
 
 	tl_debug("Update file in %s with %s\n", file_path_name, buffer_string);
 	len = fwrite(buffer_string, 1, size, fd_config);
-	if (!len) {
+	if (len != size) {
 		err = -errno;
 		tl_debug("Filed to write data to %s (errno %d)\n",
 			 file_path_name, err);
@@ -1194,7 +1194,7 @@ int update_hal_sensor_placement(char *path, char *file, char *sp_value)
 
 	tl_debug("Update file in %s with %s\n", file_path_name, buffer_string);
 	len = fwrite(buffer_string, 1, size, fd_config);
-	if (!len) {
+	if (len != size) {
 		err = -errno;
 		tl_debug("Filed to write data to %s (errno %d)\n",
 			 file_path_name, err);
@@ -1263,7 +1263,7 @@ int update_hal_config_param(char *path, char *file, int type,
 	tl_debug("Update file in %s with %s\n", file_path_name,
 		 buffer_string);
 	len = fwrite(buffer_string, 1, size, fd_config);
-	if (!len) {
+	if (len != size) {
 		err = -errno;
 		tl_debug("Filed to write data to %s (errno %d)\n",
 			 file_path_name, err);
