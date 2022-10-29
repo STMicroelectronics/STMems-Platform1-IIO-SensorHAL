@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <math.h>
+#include <ctype.h>
 
 #define TEST_LINUX_VERSION	"1.2"
 
@@ -104,6 +105,8 @@
 #define IIO_EVENT_CODE_EXTRACT_CHAN2(mask) ((__s16)(((mask) >> 16) & 0xFFFF))
 #define IIO_EVENT_CODE_EXTRACT_MODIFIER(mask) ((mask >> 40) & 0xFF)
 #define IIO_EVENT_CODE_EXTRACT_DIFF(mask) (((mask) >> 55) & 0x1)
+
+#define EVENT_NUM 4
 
 #ifdef LOG_FILE
 #define TL_FILE_DEFAULT_NAME	"log.txt"
@@ -219,7 +222,7 @@ static int sensor_num;
 static int sensor_handle = -1;
 static int test_events = 0;
 static int mlc_iio_device_number = 3;
-static int mlc_wait_events_device_number = 4;
+static int mlc_wait_events_device_number[EVENT_NUM] = {-1, -1, -1, -1};
 
 static float rot[3][3];
 static float location[3];
@@ -577,7 +580,7 @@ static void sensor_disable_all(void)
 	}
 }
 
-static void alarmHandler(int dummy)
+static void signalHandler(int dummy)
 {
 	timeout = 1;
 }
@@ -961,41 +964,49 @@ static int enable_events(int iio_device_number, int enable)
 	return ret;
 }
 
-static int poll_events(int iio_device_number, int timeout_s)
+static int poll_events(int *iio_device_number, int timeout_s)
 {
-	int fd = -1;
-	int event_fd = -1;
-	int ret = 0;
+	struct pollfd pfds[EVENT_NUM];
 	struct iio_event_data event;
 	char device_path[256];
+	int fd = -1;
+	int ret = 0;
 
-	ret = sprintf(device_path,
-		      "/dev/iio:device%d",
-		      iio_device_number);
-	if (ret < 0)
-		return ret;
+	for (int idx = 0; idx < EVENT_NUM; idx++) {
+		if (iio_device_number[idx] != -1) {
+			ret = sprintf(device_path,
+				      "/dev/iio:device%d",
+				      iio_device_number[idx]);
+			if (ret < 0)
+				return ret;
 
-	tl_debug("opening device %s\n", device_path);
-	fd = open(device_path, 0);
-	if (fd == -1) {
-		perror("open");
-		ret = -errno;
+			tl_debug("opening device %s\n", device_path);
 
-		goto exit_poll;
-	}
+			fd = open(device_path, 0);
+			if (fd == -1) {
+				perror("failed to open device\n");
+				ret = -errno;
+				goto exit_poll;
+			}
 
-	ret = enable_events(iio_device_number, 1);
-	if (ret < 0)
-		return ret;
+			ret = enable_events(iio_device_number[idx], 1);
+			if (ret < 0)
+				goto exit_poll;
 
-	ret = ioctl(fd, IIO_GET_EVENT_FD_IOCTL, &event_fd);
-	close(fd);
+			ret = ioctl(fd, IIO_GET_EVENT_FD_IOCTL, &pfds[idx].fd);
+			close(fd);
+			fd = -1;
 
-	if (ret == -1 || event_fd == -1) {
-		fprintf(stdout, "Failed to retrieve event fd\n");
-		ret = -errno;
+			if (ret == -1 || pfds[idx].fd == -1) {
+				perror("failed to retrieve event fd\n");
+				ret = -errno;
+				goto exit_poll;
+			}
 
-		goto exit_poll;
+			pfds[idx].events = POLL_IN;
+		} else {
+			pfds[idx].fd = -1; // poll() ignores pfds with an fd of -1.
+		}
 	}
 
 	if (timeout_s <= 1) {
@@ -1006,32 +1017,42 @@ static int poll_events(int iio_device_number, int timeout_s)
 	}
 
 	while (test_events && !timeout) {
-		ret = read(event_fd, &event, sizeof(event));
-		if (ret == -1) {
-			if (errno != EAGAIN) {
-				perror("Failed to read event from device");
-				ret = -errno;
-				break;
-			}
+		// We do not care about poll timeout. Alarm signal will handle that.
+		ret = poll(pfds, sizeof(pfds) / sizeof(struct pollfd), -1);
+		if (ret < 0) {
+			tl_log("Poll() returned an error: %d", ret);
 		}
 
-		if (ret == sizeof(event)) {
-			print_event(&event);
+		for (int idx = 0; idx < EVENT_NUM; idx++) {
+			if (pfds[idx].revents == POLL_IN) {
+				ret = read(pfds[idx].fd, &event, sizeof(event));
+				if (ret == sizeof(event)) {
+					print_event(&event);
+				} else {
+					if (errno != EAGAIN) {
+						perror("Failed to read event from device");
+						ret = -errno;
+						goto exit_poll;
+					}
+				}
+			}
 		}
 	}
 
 exit_poll:
 	alarm(0);
-	ret = enable_events(iio_device_number, 0);
-	if (ret < 0)
-		return ret;
+	timeout = 0;
 
 	if (fd)
 		close(fd);
 
-	if (event_fd)
-		close(event_fd);
-	timeout = 0;
+	for (int idx = 0; idx < EVENT_NUM; idx++) {
+		enable_events(iio_device_number[idx], 0);
+
+		if (pfds[idx].fd)
+			close(pfds[idx].fd);
+	}
+
 	return ret;
 }
 
@@ -1067,12 +1088,13 @@ static int set_power_mode(char *device, int mode)
 	return ret;
 }
 
-static void ctrlzHandler(int events)
+static void exitHandler(int events)
 {
 	sensor_disable_all();
 
 	if (events)
-		enable_events(mlc_iio_device_number, 0);
+		for (int idx = 0; idx <= EVENT_NUM; idx++)
+			enable_events(mlc_wait_events_device_number[idx], 0);
 
 #ifdef LOG_FILE
 	if (logfd)
@@ -1451,7 +1473,13 @@ int main(int argc, char **argv)
 			break;
 		case 'e':
 			wait_events = 1;
-			mlc_wait_events_device_number = atoi(optarg);
+			char *events = strtok(optarg, ",");
+			int idx = 0;
+			do {
+				mlc_wait_events_device_number[idx++] = atoi(events);
+				if (idx >= EVENT_NUM)
+					break;
+			} while (events = strtok(NULL, ","));
 			break;
 #ifdef LOG_FILE
 		case 'o':
@@ -1611,8 +1639,8 @@ int main(int argc, char **argv)
 		sensor_setdelay(SENSOR_TYPE_GYROSCOPE, gyro_odr);
 	}
 
-	signal(SIGINT, ctrlzHandler);
-	signal(SIGALRM, alarmHandler);
+	signal(SIGINT, signalHandler);
+	signal(SIGALRM, signalHandler);
 
 	start_systime = 0LL;
 	for(i = 0; i < 3; i++)
@@ -1660,7 +1688,7 @@ int main(int argc, char **argv)
 		else
 			all_sensor_test(notemp);
 	}
-	ctrlzHandler(wait_events);
+	exitHandler(wait_events);
 
 	return 0;
 }
