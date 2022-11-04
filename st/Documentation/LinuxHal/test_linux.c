@@ -1104,6 +1104,50 @@ static void exitHandler(int events)
 	exit(0);
 }
 
+static int search_replace(FILE *fd, const char *filepath, const char *target, const char *arrow)
+{
+	tl_debug("search_replace start\n");
+	int found = 0;
+	int ret = 0;
+	int renameRet = 0;
+	char *line_buffer = NULL;
+	char *line_buffer_internal = NULL;
+	size_t line_buffer_s;
+	size_t line_buffer_internal_s;
+	ssize_t nread;
+	ssize_t nread_internal;
+	tl_debug("search_replace start\n");
+
+	FILE *ftemp = fopen("replace.tmp", "w");
+	if (!ftemp) {
+		tl_debug("Unable to open file. (errno %d)\n", -errno);
+		return -errno;
+	}
+
+	while ((nread = getline(&line_buffer, &line_buffer_s, fd)) != -1) {
+		if (!strstr(line_buffer, target)) {
+			if (fwrite(line_buffer, sizeof(char), nread, ftemp) != nread * sizeof(char)) {
+				tl_debug("Failed to write [%s] to file. (errno %d)\n", line_buffer, -errno);
+				ret = -errno;
+				break;
+			}
+		}
+	}
+
+	if (fwrite(arrow, sizeof(char), strlen(arrow), ftemp) != strlen(arrow)) {
+		tl_debug("Failed to write %s: (errno %d).\n", arrow, -errno);
+		ret = -errno;
+	}
+
+	fclose(ftemp);
+
+	remove(filepath);
+
+	renameRet = rename("replace.tmp", filepath);
+
+	return (ret < renameRet) ? ret : renameRet;
+}
+
 int update_hal_rotation_matrix(char *path, char *file, char *rm_value)
 {
 	float yaw, pitch, roll;
@@ -1122,54 +1166,40 @@ int update_hal_rotation_matrix(char *path, char *file, char *rm_value)
 		return -ENOMEM;
 	}
 
-	sprintf(file_path_name, "%s/%s", path, file);
-	fd_config = fopen(file_path_name, "w+");
+	snprintf(file_path_name, strlen(path) + strlen(file) + 2, "%s/%s", path, file);
+	fd_config = fopen(file_path_name, "r+");
 	if (!fd_config) {
 		err = -errno;
-		tl_debug("Filed to open %s (errno %d)\n",
+		tl_debug("Failed to open %s (errno %d)\n",
 			 file_path_name, err);
 
-		goto err_out;
+		goto free_path;
 	}
 
-	size = strlen("imu_sensor_euler_angles = []") +
+	size = strlen("imu_sensor_euler_angles = []\n") +
 	       strlen(rm_value) + 2;
 	buffer_string = (char *)calloc(size, 1);
 	if (!buffer_string) {
 		err = -errno;
 		tl_debug("Unable to allocate memory (errno %d)\n", err);
 
-		goto err_out;
+		goto close_hal_config;
 	}
 
-	size = sprintf(buffer_string, "imu_sensor_euler_angles = [%s]",
+	size = snprintf(buffer_string, size, "imu_sensor_euler_angles = [%s]\n",
 		       rm_value);
 
 	tl_debug("Update file in %s with %s\n", file_path_name, buffer_string);
-	len = fwrite(buffer_string, 1, size, fd_config);
-	if (len != size) {
-		err = -errno;
-		tl_debug("Filed to write data to %s (errno %d)\n",
-			 file_path_name, err);
-	}
 
-err_out:
-	if (fd_config) {
-		fclose(fd_config);
-	}
+	err = search_replace(fd_config, file_path_name, "imu_sensor_euler_angles", buffer_string);
 
-	if (file_path_name) {
-		free(file_path_name);
-	}
+	free(buffer_string);
 
-	if (buffer_string) {
-		free(buffer_string);
-	}
+close_hal_config:
+	fclose(fd_config);
 
-	size = sscanf(rm_value, "%f,%f,%f", &roll, &pitch, &yaw);
-	if (size > 0) {
-		apply_rotation(yaw, pitch, roll);
-	}
+free_path:
+	free(file_path_name);
 
 	return err;
 }
@@ -1191,14 +1221,14 @@ int update_hal_sensor_placement(char *path, char *file, char *sp_value)
 		return -ENOMEM;
 	}
 
-	sprintf(file_path_name, "%s/%s", path, file);
-	fd_config = fopen(file_path_name, "w+");
+	snprintf(file_path_name, strlen(path) + strlen(file) + 2,"%s/%s", path, file);
+	fd_config = fopen(file_path_name, "r+");
 	if (!fd_config) {
 		err = -errno;
-		tl_debug("Filed to open %s (errno %d)\n",
+		tl_debug("Failed to open %s (errno %d)\n",
 			 file_path_name, err);
 
-		goto err_out;
+		goto free_path;
 	}
 
 	size = strlen("imu_sensor_placement = []") +
@@ -1208,38 +1238,28 @@ int update_hal_sensor_placement(char *path, char *file, char *sp_value)
 		err = -errno;
 		tl_debug("Unable to allocate memory (errno %d)\n", err);
 
-		goto err_out;
+		goto close_hal_config;
 	}
 
-	size = sprintf(buffer_string, "imu_sensor_placement = [%s]",
-		       sp_value);
+	size = snprintf(buffer_string, size, "imu_sensor_placement = [%s]", sp_value);
 
 	tl_debug("Update file in %s with %s\n", file_path_name, buffer_string);
-	len = fwrite(buffer_string, 1, size, fd_config);
-	if (len != size) {
-		err = -errno;
-		tl_debug("Filed to write data to %s (errno %d)\n",
-			 file_path_name, err);
-	}
 
-err_out:
-	if (fd_config) {
-		fclose(fd_config);
-	}
+	err = search_replace(fd_config, file_path_name, "imu_sensor_placement", buffer_string);
 
-	if (file_path_name) {
-		free(file_path_name);
-	}
+	free(buffer_string);
 
-	if (buffer_string) {
-		free(buffer_string);
-	}
+close_hal_config:
+	fclose(fd_config);
+
+free_path:
+	free(file_path_name);
 
 	return err;
 }
 
 int update_hal_config_param(char *path, char *file, int type,
-			    unsigned int value)
+			unsigned int value)
 {
 	char *file_path_name = NULL;
 	char *buffer_string = NULL;
@@ -1256,14 +1276,14 @@ int update_hal_config_param(char *path, char *file, int type,
 		return -ENOMEM;
 	}
 
-	sprintf(file_path_name, "%s/%s", path, file);
-	fd_config = fopen(file_path_name, "w+");
+	snprintf(file_path_name, strlen(path) + strlen(file) + 2, "%s/%s\n", path, file);
+	fd_config = fopen(file_path_name, "r+");
 	if (!fd_config) {
 		err = -errno;
-		tl_debug("Filed to open %s (errno %d)\n",
+		tl_debug("Failed to open %s (errno %d)\n",
 			 file_path_name, err);
 
-		goto err_out;
+		goto free_path;
 	}
 
 	size = strlen(parsing_strings[type]) + 10;
@@ -1272,37 +1292,28 @@ int update_hal_config_param(char *path, char *file, int type,
 		err = -errno;
 		tl_debug("Unable to allocate memory (errno %d)\n", err);
 
-		goto err_out;
+		goto close_hal_config;
 	}
 
 	if (type == TOW_JACK_DELTA_THRESHOLD || type == CRASH_IMPACT_THRESHOLD)
-		size = sprintf(buffer_string, "%s%u",
+		size = snprintf(buffer_string, size, "%s%u\n",
 			       parsing_strings[type], value);
 	else
-		size = sprintf(buffer_string, "%s%hu",
+		size = snprintf(buffer_string, size, "%s%hu\n",
 			       parsing_strings[type], value);
 
 	tl_debug("Update file in %s with %s\n", file_path_name,
 		 buffer_string);
-	len = fwrite(buffer_string, 1, size, fd_config);
-	if (len != size) {
-		err = -errno;
-		tl_debug("Filed to write data to %s (errno %d)\n",
-			 file_path_name, err);
-	}
 
-err_out:
-	if (fd_config) {
-		fclose(fd_config);
-	}
+	err = search_replace(fd_config, file_path_name, parsing_strings[type], buffer_string);
 
-	if (file_path_name) {
-		free(file_path_name);
-	}
+	free(buffer_string);
 
-	if (buffer_string) {
-		free(buffer_string);
-	}
+close_hal_config:
+	fclose(fd_config);
+
+free_path:
+	free(file_path_name);
 
 	return err;
 }
@@ -1359,37 +1370,16 @@ static int ignition_toggle(int ign_state)
 	size = snprintf(buffer_string, len + 1, "ignition_off = %1u\n", ign_state);
 
 	// update file
-	int found = 0;
-	while (fgets(line_buffer, size, fd_hal_config) != NULL) {
-		if (strstr(line_buffer, "ignition_off = ")) {
-			file_pos = strlen(line_buffer);
-			fseek(fd_hal_config, -file_pos, SEEK_CUR);
-			len = fwrite(buffer_string, sizeof(char), size, fd_hal_config);
-			if (len != size) {
-				err = -errno;
-				printf("Failed to write %s to file %s (errno %d).\n", buffer_string, hal_config_path, err);
-			} else {
-				err = 0;
-				printf("Updated ignition_off = %d\n", ign_state);
-			}
-			found = 1;
-			break;
-		}
-	}
-	if (found == 0) {
-		fseek(fd_hal_config, -file_pos, SEEK_END);
-		len = fwrite(buffer_string, sizeof(char), size, fd_hal_config);
-		if (len != size) {
-			err = errno;
-			printf("Failed to write %s to file %s (errno %d).\n", buffer_string, fd_hal_config, err);
-		}
-	}
+	err = search_replace(fd_hal_config, hal_config_path, "ignition_off", buffer_string);
 
 	free(line_buffer);
+
 free_line_buffer:
 	free(buffer_string);
+
 close_fd_hal_config:
 	fclose(fd_hal_config);
+
 free_hal_config_path:
 	free(hal_config_path);
 
@@ -1682,6 +1672,7 @@ int main(int argc, char **argv)
 					HAL_CONFIGURATION_FILE,
 					CRASH_MINIMUM_DURATION,
 					cmdur);
+
 	if (!wait_events) {
 		if (sensor_handle >= 0)
 			single_sensor_test(sensor_handle);
