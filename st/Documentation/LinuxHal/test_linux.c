@@ -1020,6 +1020,7 @@ static int poll_events(int *iio_device_number, int timeout_s)
 		// We do not care about poll timeout. Alarm signal will handle that.
 		ret = poll(pfds, sizeof(pfds) / sizeof(struct pollfd), -1);
 		if (ret < 0) {
+			ret = -errno;
 			tl_log("Poll() returned an error: %d", ret);
 		}
 
@@ -1092,10 +1093,16 @@ static void exitHandler(int events)
 {
 	sensor_disable_all();
 
-	if (events)
-		for (int idx = 0; idx <= EVENT_NUM; idx++)
-			enable_events(mlc_wait_events_device_number[idx], 0);
-
+	if (events) {
+		for (int idx = 0; idx < EVENT_NUM; idx++) {
+			if (mlc_wait_events_device_number[idx] != -1) {
+				int ret = enable_events(mlc_wait_events_device_number[idx], 0);
+				if (ret < 0) {
+					tl_debug("Failed to disable events[%d]", idx);
+				}
+			}
+		}
+	}
 #ifdef LOG_FILE
 	if (logfd)
 		fclose(logfd);
@@ -1106,7 +1113,6 @@ static void exitHandler(int events)
 
 static int search_replace(FILE *fd, const char *filepath, const char *target, const char *arrow)
 {
-	tl_debug("search_replace start\n");
 	int found = 0;
 	int ret = 0;
 	int renameRet = 0;
