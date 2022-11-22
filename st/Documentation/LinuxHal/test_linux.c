@@ -1538,6 +1538,42 @@ int main(int argc, char **argv)
 	}
 #endif /* LOG_FILE */
 
+	signal(SIGINT, exitHandler);
+	signal(SIGALRM, signalHandler);
+
+	if (rm_value)
+		update_hal_rotation_matrix(HAL_CONFIGURATION_PATH,
+					   HAL_CONFIGURATION_FILE,
+					   rm_value);
+	if (sp_value)
+		update_hal_sensor_placement(HAL_CONFIGURATION_PATH,
+					    HAL_CONFIGURATION_FILE,
+					    sp_value);
+
+	if (tjth > 0)
+		update_hal_config_param(HAL_CONFIGURATION_PATH,
+					HAL_CONFIGURATION_FILE,
+					TOW_JACK_DELTA_THRESHOLD,
+					tjth);
+
+	if (tjdur > 0)
+		update_hal_config_param(HAL_CONFIGURATION_PATH,
+					HAL_CONFIGURATION_FILE,
+					TOW_JACK_DURATION,
+					tjdur);
+
+	if (cith > 0)
+		update_hal_config_param(HAL_CONFIGURATION_PATH,
+					HAL_CONFIGURATION_FILE,
+					CRASH_IMPACT_THRESHOLD,
+					cith);
+
+	if (cmdur > 0)
+		update_hal_config_param(HAL_CONFIGURATION_PATH,
+					HAL_CONFIGURATION_FILE,
+					CRASH_MINIMUM_DURATION,
+					cmdur);
+
 	if (find_mlc) {
 		mlc_iio_device_number = find_mlc_iio_device_number();
 		if (mlc_iio_device_number < 0) {
@@ -1629,49 +1665,11 @@ int main(int argc, char **argv)
 		sensor_setdelay(SENSOR_TYPE_GYROSCOPE, gyro_odr);
 	}
 
-	signal(SIGINT, signalHandler);
-	signal(SIGALRM, signalHandler);
-
 	start_systime = 0LL;
 	for(i = 0; i < 3; i++)
 		start_sensortime[i] = 0LL;
 
 	init_rotation_location();
-
-	if (rm_value)
-		update_hal_rotation_matrix(HAL_CONFIGURATION_PATH,
-					   HAL_CONFIGURATION_FILE,
-					   rm_value);
-	if (sp_value)
-		update_hal_sensor_placement(HAL_CONFIGURATION_PATH,
-					    HAL_CONFIGURATION_FILE,
-					    sp_value);
-
-
-
-	if (tjth > 0)
-		update_hal_config_param(HAL_CONFIGURATION_PATH,
-					HAL_CONFIGURATION_FILE,
-					TOW_JACK_DELTA_THRESHOLD,
-					tjth);
-
-	if (tjdur > 0)
-		update_hal_config_param(HAL_CONFIGURATION_PATH,
-					HAL_CONFIGURATION_FILE,
-					TOW_JACK_DURATION,
-					tjdur);
-
-	if (cith > 0)
-		update_hal_config_param(HAL_CONFIGURATION_PATH,
-					HAL_CONFIGURATION_FILE,
-					CRASH_IMPACT_THRESHOLD,
-					cith);
-
-	if (cmdur > 0)
-		update_hal_config_param(HAL_CONFIGURATION_PATH,
-					HAL_CONFIGURATION_FILE,
-					CRASH_MINIMUM_DURATION,
-					cmdur);
 
 	if (!wait_events) {
 		if (sensor_handle >= 0)
